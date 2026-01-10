@@ -1,0 +1,48 @@
+{
+  "node_id": "arrays.cache_locality",
+  "title": "Cache Locality",
+  "depth_level": "intermediate",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism",
+    "arrays.random_access_property",
+    "arrays.time_complexity"
+  ],
+  "description": {
+    "core_idea": "Arrays are cache-friendly because elements are stored consecutively in memory, which hardware caches optimize for.",
+    "explanation": [
+      "CPU caches store chunks of memory called cache lines.",
+      "Accessing one element often brings nearby elements into cache (spatial locality).",
+      "Repeated access of the same elements keeps them in cache (temporal locality).",
+      "Contiguous memory layout of arrays maximizes these benefits, improving real-world speed."
+    ],
+    "key_points": [
+      "Contiguous memory enables spatial locality",
+      "Recent accesses benefit from temporal locality",
+      "Traversal of arrays is fast due to CPU cache"
+    ]
+  },
+  "examples": [
+    "Looping through an array is faster than looping through a linked list of same size.",
+    "Accessing arr[i] after arr[i-1] is likely cached in the same cache line."
+  ],
+  "common_misconceptions": [
+    "Arrays are always faster than linked lists in every situation",
+    "Cache is software-level optimization"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "spatial locality",
+      "temporal locality",
+      "cache lines",
+      "hardware-aware reasoning"
+    ],
+    "blocked_topics": [
+      "low-level CPU microarchitecture",
+      "prefetch algorithms",
+      "dynamic arrays resizing"
+    ]
+  }
+}

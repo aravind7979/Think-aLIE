@@ -1,0 +1,50 @@
+{
+  "node_id": "arrays.traversal_patterns",
+  "title": "Traversal Patterns",
+  "depth_level": "intermediate",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism",
+    "arrays.random_access_property",
+    "arrays.time_complexity",
+    "arrays.cache_locality"
+  ],
+  "description": {
+    "core_idea": "Traversal patterns determine how elements are accessed and affect practical performance.",
+    "explanation": [
+      "Sequential traversal reads elements in order from memory.",
+      "Reverse traversal reads elements from the end backward.",
+      "Strided access reads elements at fixed intervals, possibly skipping cache lines.",
+      "Choice of traversal can affect performance and cache utilization."
+    ],
+    "key_points": [
+      "Sequential access is usually fastest",
+      "Reverse access is slightly different due to cache prefetch",
+      "Strided access can degrade performance",
+      "Traversal is fundamental for algorithms on arrays"
+    ]
+  },
+  "examples": [
+    "for (i = 0; i < n; i++) → sequential traversal",
+    "for (i = n-1; i >= 0; i--) → reverse traversal",
+    "for (i = 0; i < n; i += 2) → strided access"
+  ],
+  "common_misconceptions": [
+    "Traversal patterns do not affect performance",
+    "All loops over arrays are equivalent in hardware efficiency"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "sequential traversal",
+      "reverse traversal",
+      "strided access",
+      "cache implications"
+    ],
+    "blocked_topics": [
+      "complex algorithm optimization",
+      "dynamic array resizing"
+    ]
+  }
+}

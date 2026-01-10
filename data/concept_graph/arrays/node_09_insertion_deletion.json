@@ -1,0 +1,46 @@
+{
+  "node_id": "arrays.insertion_deletion_costs",
+  "title": "Insertion & Deletion Costs",
+  "depth_level": "intermediate",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism",
+    "arrays.random_access_property",
+    "arrays.time_complexity",
+    "arrays.traversal_patterns"
+  ],
+  "description": {
+    "core_idea": "Adding or removing elements in an array requires shifting elements to maintain contiguity, which can be costly.",
+    "explanation": [
+      "When inserting at a specific position, elements to the right must move one position forward.",
+      "When deleting an element, elements to the right must move backward to fill the gap.",
+      "Operations at the end (if space exists) are cheaper than middle operations."
+    ],
+    "key_points": [
+      "Middle insertion/deletion requires shifting elements",
+      "End insertion is fast if space available",
+      "Shifting preserves contiguity"
+    ]
+  },
+  "examples": [
+    "Insert 5 at index 2 → elements at 2,3,4… move right by 1",
+    "Delete index 0 → all elements shift left by 1"
+  ],
+  "common_misconceptions": [
+    "Insertion/deletion in arrays is always fast",
+    "Memory automatically adjusts for new elements"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "shifting elements",
+      "end insertion optimization",
+      "middle deletion cost"
+    ],
+    "blocked_topics": [
+      "dynamic array resizing",
+      "linked list comparison"
+    ]
+  }
+}

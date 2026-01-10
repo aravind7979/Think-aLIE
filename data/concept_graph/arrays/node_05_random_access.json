@@ -1,0 +1,44 @@
+{
+  "node_id": "arrays.random_access_property",
+  "title": "Random Access Property",
+  "depth_level": "beginner",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism"
+  ],
+  "description": {
+    "core_idea": "Arrays allow direct access to any element using its index without iterating over previous elements.",
+    "explanation": [
+      "Because elements are contiguous and have fixed size, the memory address can be calculated instantly.",
+      "Accessing arr[i] requires only base_address + (i × element_size).",
+      "No scanning or traversal is needed."
+    ],
+    "key_points": [
+      "Direct address computation",
+      "No loops needed for access",
+      "All elements are reachable instantly"
+    ]
+  },
+  "examples": [
+    "arr[5] can be accessed directly from memory using its offset.",
+    "In contrast, linked lists require traversal to reach the 5th element."
+  ],
+  "common_misconceptions": [
+    "Accessing a later element requires scanning all previous elements",
+    "Random access means data is shuffled in memory"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "base address",
+      "offset calculation",
+      "direct memory access"
+    ],
+    "blocked_topics": [
+      "time complexity formulas",
+      "cache locality",
+      "insertion/deletion costs"
+    ]
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "node_id": "arrays.time_complexity",
+  "title": "Time Complexity (Informal)",
+  "depth_level": "beginner",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism",
+    "arrays.random_access_property"
+  ],
+  "description": {
+    "core_idea": "Array operations have predictable performance due to contiguous memory and fixed-size elements.",
+    "explanation": [
+      "Accessing any element by index is instant because the memory address can be computed directly.",
+      "Traversing an array takes time proportional to its size because each element must be visited.",
+      "Inserting or deleting elements in the middle requires shifting, making it slower."
+    ],
+    "key_points": [
+      "Access is constant time (O(1))",
+      "Traversal is linear (O(n))",
+      "Middle insertion/deletion requires shifting elements"
+    ]
+  },
+  "examples": [
+    "arr[10] is accessed immediately from memory.",
+    "Looping through 100 elements requires 100 read operations.",
+    "Inserting at position 0 shifts all existing elements one step forward."
+  ],
+  "common_misconceptions": [
+    "All array operations are equally fast",
+    "Accessing later elements takes longer"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "O(1) access intuition",
+      "linear traversal",
+      "shifting for insert/delete"
+    ],
+    "blocked_topics": [
+      "formal Big-O proofs",
+      "cache effects",
+      "dynamic arrays resizing"
+    ]
+  }
+}

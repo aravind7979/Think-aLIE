@@ -1,0 +1,50 @@
+{
+  "node_id": "arrays.multi_dimensional_intro",
+  "title": "Multi-Dimensional Arrays (Intro)",
+  "depth_level": "intermediate",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation",
+    "arrays.indexing_mechanism",
+    "arrays.random_access_property",
+    "arrays.traversal_patterns",
+    "arrays.insertion_deletion_costs"
+  ],
+  "description": {
+    "core_idea": "Multi-dimensional arrays extend 1D arrays by storing elements in contiguous memory while preserving predictable access.",
+    "explanation": [
+      "A 2D array is essentially a 1D block of memory with rows (or columns) stored consecutively.",
+      "Row-major order stores all elements of row 0, then row 1, etc.",
+      "Column-major order stores all elements of column 0, then column 1, etc.",
+      "Access formula: base_address + (row × row_size + column) × element_size"
+    ],
+    "key_points": [
+      "Memory remains contiguous",
+      "Access formula adapts to multiple dimensions",
+      "Traversal patterns extend naturally",
+      "Helps understand matrices and higher dimensions"
+    ]
+  },
+  "examples": [
+    "2x3 array in row-major: arr[1][2] = base + (1*3 + 2)*size",
+    "2D array traversal loops row first or column first"
+  ],
+  "common_misconceptions": [
+    "Each row is independently scattered in memory",
+    "2D array elements require separate memory allocations"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "row-major order",
+      "column-major order",
+      "base address calculation in 2D/3D",
+      "traversal patterns"
+    ],
+    "blocked_topics": [
+      "matrix multiplication optimization",
+      "dynamic array resizing",
+      "cache blocking techniques"
+    ]
+  }
+}
