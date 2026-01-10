@@ -1,0 +1,45 @@
+{
+  "node_id": "arrays.contiguous_memory_allocation",
+  "title": "Contiguous Memory Allocation",
+  "depth_level": "beginner",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation"
+  ],
+  "description": {
+    "core_idea": "An array stores elements in consecutive memory locations without gaps.",
+    "explanation": [
+      "When an array is created, a continuous block of memory is allocated.",
+      "Each element occupies the same fixed number of bytes.",
+      "Elements are placed one after another in memory.",
+      "The first element has a base address, and all others are located at fixed offsets from it."
+    ],
+    "key_points": [
+      "Memory is allocated as one continuous block",
+      "All elements have uniform size",
+      "There are no gaps between elements",
+      "The array has a single base address"
+    ]
+  },
+  "examples": [
+    "An array of 5 integers occupies 5 × 4 = 20 consecutive bytes.",
+    "If the base address is 1000, the next element starts at 1004."
+  ],
+  "common_misconceptions": [
+    "Array elements are scattered in memory",
+    "Each element has its own independent memory block"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "base address",
+      "fixed-size elements",
+      "consecutive memory blocks"
+    ],
+    "blocked_topics": [
+      "indexing formula",
+      "time complexity",
+      "cache locality",
+      "random access"
+    ]
+  }
+}
