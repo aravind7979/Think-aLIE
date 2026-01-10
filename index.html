@@ -8,21 +8,26 @@
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: auto; }
     h1 { color: #2c3e50; }
     h2 { color: #34495e; margin-top: 20px; }
-    select { padding: 5px; margin-bottom: 20px; font-size: 16px; }
+    select { padding: 5px; margin: 10px 0; font-size: 16px; }
+    button { padding: 5px 10px; margin: 0 5px; font-size: 14px; cursor: pointer; }
     .section { margin-bottom: 20px; }
     ul { margin-left: 20px; }
+    .nav-buttons { margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <h1>Think-LIE: Arrays Concept Viewer</h1>
 
-  <!-- Dropdown to select node -->
+  <!-- Node Selection -->
   <label for="node-select"><strong>Select Node:</strong></label>
-  <select id="node-select">
-    <option value="">Loading nodes...</option>
-  </select>
+  <select id="node-select"></select>
 
-  <!-- Node content -->
+  <div class="nav-buttons">
+    <button id="prev-node">Previous Node</button>
+    <button id="next-node">Next Node</button>
+  </div>
+
+  <!-- Node Content -->
   <div class="section">
     <h2 id="node-title"></h2>
     <p id="node-core-idea"></p>
@@ -50,28 +55,35 @@
     const explanation = document.getElementById('node-explanation');
     const examples = document.getElementById('node-examples');
     const keypoints = document.getElementById('node-keypoints');
+    const prevBtn = document.getElementById('prev-node');
+    const nextBtn = document.getElementById('next-node');
 
-    // Load index.json first
+    let nodes = [];
+    let currentIndex = 0;
+
+    // Load index.json
     fetch('data/concept_graph/arrays/index.json')
       .then(res => res.json())
       .then(indexData => {
+        nodes = indexData.nodes;
         select.innerHTML = '';
-        indexData.nodes.forEach(nodeFile => {
+        nodes.forEach((nodeFile, idx) => {
           const option = document.createElement('option');
-          option.value = nodeFile;
+          option.value = idx;
           option.innerText = nodeFile.replace('.json','').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
           select.appendChild(option);
         });
 
-        // Auto-select first node
-        if (indexData.nodes.length > 0) {
-          loadNode(indexData.nodes[0]);
-        }
+        // Load first node by default
+        loadNode(0);
       });
 
-    // Load a node JSON and populate page
-    function loadNode(nodeFile) {
-      fetch('data/concept_graph/arrays/' + nodeFile)
+    function loadNode(index) {
+      if (index < 0 || index >= nodes.length) return;
+      currentIndex = index;
+      select.value = index;
+
+      fetch('data/concept_graph/arrays/' + nodes[index])
         .then(res => res.json())
         .then(data => {
           title.innerText = data.title;
@@ -107,11 +119,20 @@
         });
     }
 
-    // Event listener for dropdown
+    // Dropdown change
     select.addEventListener('change', (e) => {
-      if (e.target.value) {
-        loadNode(e.target.value);
-      }
+      loadNode(parseInt(e.target.value));
+    });
+
+    // Next / Previous buttons
+    nextBtn.addEventListener('click', () => {
+      const nextIndex = currentIndex + 1;
+      if (nextIndex < nodes.length) loadNode(nextIndex);
+    });
+
+    prevBtn.addEventListener('click', () => {
+      const prevIndex = currentIndex - 1;
+      if (prevIndex >= 0) loadNode(prevIndex);
     });
   </script>
 </body>
