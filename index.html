@@ -62,7 +62,7 @@
     let currentIndex = 0;
 
     // Load index.json
-    fetch('data/concept_graph/arrays/index.json')
+    fetch('./data/concept_graph/arrays/index.json')
       .then(res => res.json())
       .then(indexData => {
         nodes = indexData.nodes;
@@ -70,12 +70,15 @@
         nodes.forEach((nodeFile, idx) => {
           const option = document.createElement('option');
           option.value = idx;
-          option.innerText = nodeFile.replace('.json','').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+          option.innerText = `Node ${idx+1}: ` + nodeFile.replace('.json','').replace(/_/g,' ');
           select.appendChild(option);
         });
 
         // Load first node by default
-        loadNode(0);
+        if(nodes.length > 0){
+            loadNode(0);
+        }
+        
       });
 
     function loadNode(index) {
@@ -83,7 +86,7 @@
       currentIndex = index;
       select.value = index;
 
-      fetch('data/concept_graph/arrays/' + nodes[index])
+      fetch('./data/concept_graph/arrays/' + nodes[index])
         .then(res => res.json())
         .then(data => {
           title.innerText = data.title;
@@ -121,19 +124,24 @@
 
     // Dropdown change
     select.addEventListener('change', (e) => {
-      loadNode(parseInt(e.target.value));
+      const selectedIndex = parseInt(e.target.value);
+      if (!isNaN(selectedIndex)) loadNode(selectedIndex);
     });
+
 
     // Next / Previous buttons
-    nextBtn.addEventListener('click', () => {
-      const nextIndex = currentIndex + 1;
-      if (nextIndex < nodes.length) loadNode(nextIndex);
-    });
+nextBtn.addEventListener('click', () => {
+  if (currentIndex + 1 < nodes.length) {
+    loadNode(currentIndex + 1);
+  }
+});
 
-    prevBtn.addEventListener('click', () => {
-      const prevIndex = currentIndex - 1;
-      if (prevIndex >= 0) loadNode(prevIndex);
-    });
+prevBtn.addEventListener('click', () => {
+  if (currentIndex - 1 >= 0) {
+    loadNode(currentIndex - 1);
+  }
+});
+
   </script>
 </body>
 </html>
