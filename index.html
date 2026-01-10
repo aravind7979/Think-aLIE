@@ -141,7 +141,93 @@ prevBtn.addEventListener('click', () => {
     loadNode(currentIndex - 1);
   }
 });
+const chatIcon = document.getElementById("ai-chat-icon");
+const chatWindow = document.getElementById("ai-chat-window");
+const chatInput = document.getElementById("ai-chat-input");
+const chatMessages = document.getElementById("ai-chat-messages");
+
+chatIcon.onclick = () => {
+  chatWindow.style.display =
+    chatWindow.style.display === "flex" ? "none" : "flex";
+};
+
+chatInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter" && chatInput.value.trim() !== "") {
+    const userMsg = chatInput.value;
+    appendMessage("You", userMsg);
+    chatInput.value = "";
+
+    // Temporary response (until backend is added)
+    appendMessage("Think-LIE AI", 
+      "I understand your question about arrays. AI reasoning will be enabled once the backend is connected."
+    );
+  }
+});
+
+function appendMessage(sender, text) {
+  const div = document.createElement("div");
+  div.innerHTML = `<strong>${sender}:</strong> ${text}`;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
   </script>
+  <!-- AI Chat Icon -->
+<div id="ai-chat-icon">🤖</div>
+
+<!-- AI Chat Window -->
+<div id="ai-chat-window">
+  <div id="ai-chat-header">Think-LIE AI</div>
+  <div id="ai-chat-messages"></div>
+  <input type="text" id="ai-chat-input" placeholder="Ask about Arrays..." />
+</div>
+
+<style>
+  #ai-chat-icon {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #2c3e50;
+    color: white;
+    padding: 12px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+  }
+
+  #ai-chat-window {
+    position: fixed;
+    bottom: 80px;
+    right: 20px;
+    width: 300px;
+    height: 400px;
+    background: white;
+    border: 1px solid #ccc;
+    display: none;
+    flex-direction: column;
+  }
+
+  #ai-chat-header {
+    background: #2c3e50;
+    color: white;
+    padding: 10px;
+    font-weight: bold;
+  }
+
+  #ai-chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    font-size: 14px;
+  }
+
+  #ai-chat-input {
+    border: none;
+    border-top: 1px solid #ccc;
+    padding: 10px;
+    width: 100%;
+    outline: none;
+  }
+</style>
 </body>
 </html>
