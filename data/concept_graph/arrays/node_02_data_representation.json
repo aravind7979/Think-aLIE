@@ -1,0 +1,45 @@
+{
+  "node_id": "arrays.data_representation",
+  "title": "Data Representation",
+  "depth_level": "beginner",
+  "prerequisites": [
+    "arrays.memory_model"
+  ],
+  "description": {
+    "core_idea": "All data in a computer is ultimately represented as binary bits grouped into bytes.",
+    "explanation": [
+      "A bit is the smallest unit of data and can be either 0 or 1.",
+      "Eight bits form one byte.",
+      "Data types like integers are represented using a fixed number of bytes.",
+      "The meaning of data depends on how those bytes are interpreted."
+    ],
+    "key_points": [
+      "Bits are the fundamental units of data",
+      "Bytes are groups of 8 bits",
+      "Data types have fixed sizes in memory",
+      "Memory stores raw bits, not meanings"
+    ]
+  },
+  "examples": [
+    "An integer may occupy 4 bytes (32 bits) in memory.",
+    "The same sequence of bits can represent different values depending on interpretation."
+  ],
+  "common_misconceptions": [
+    "Memory understands integers or characters",
+    "All data types take the same amount of memory"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "bits",
+      "bytes",
+      "integer representation",
+      "fixed-size data"
+    ],
+    "blocked_topics": [
+      "arrays",
+      "indexing",
+      "contiguous memory",
+      "cache"
+    ]
+  }
+}
