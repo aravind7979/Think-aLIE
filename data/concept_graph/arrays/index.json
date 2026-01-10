@@ -1,0 +1,16 @@
+{
+  "concept": "arrays",
+  "nodes": [
+    "node_01_memory_model.json",
+    "node_02_data_representation.json",
+    "node_03_contiguous_memory_allocation.json",
+    "node_04_indexing_mechanism.json",
+    "node_05_random_access_property.json",
+    "node_06_time_complexity.json",
+    "node_07_cache_locality.json",
+    "node_08_traversal_patterns.json",
+    "node_09_insertion_deletion.json",
+    "node_10_multi_dimensional_intro.json",
+    "node_11_summary_ai_scope.json"
+  ]
+}
