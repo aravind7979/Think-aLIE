@@ -1,49 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Think-LIE — Project Status</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #0f172a;
-            color: #e5e7eb;
-        }
-        h1 {
-            color: #38bdf8;
-        }
-        .card {
-            background: #020617;
-            padding: 20px;
-            border-radius: 8px;
-            max-width: 800px;
-        }
-        .status {
-            color: #22c55e;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
+<div id="node-title"></div>
+<div id="node-description"></div>
 
-    <h1>Think-LIE</h1>
-    <h2>Language Intelligence Engine</h2>
-
-    <div class="card">
-        <p><strong>Current Phase:</strong> Concept Graph – Version 0</p>
-        <p><strong>Domain:</strong> Data Structures</p>
-        <p><strong>Topic:</strong> Arrays</p>
-        <p><strong>Current Node:</strong> <span class="status">Node 11 – Arrays Summary & AI-Scope Wrap-Up</span></p>
-        <p>
-            This page exists only to track live project progress.
-            Each Git commit updates the internal intelligence of Think-LIE.
-        </p>
-
-        <p>
-            Next milestone will appear here as development advances.
-        </p>
-    </div>
-
-</body>
-</html>
+<script>
+fetch('data/concept_graph/arrays/node_11_summary_ai_scope.json')
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById('node-title').innerText = data.title;
+    document.getElementById('node-description').innerText = data.description.core_idea;
+  });
+</script>
