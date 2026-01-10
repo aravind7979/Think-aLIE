@@ -1,0 +1,45 @@
+{
+  "node_id": "arrays.indexing_mechanism",
+  "title": "Indexing Mechanism",
+  "depth_level": "beginner",
+  "prerequisites": [
+    "arrays.memory_model",
+    "arrays.data_representation",
+    "arrays.contiguous_memory_allocation"
+  ],
+  "description": {
+    "core_idea": "Array indexing works by computing the memory address of an element using a base address and a fixed offset.",
+    "explanation": [
+      "An array has a base address, which is the address of its first element.",
+      "Each element has the same fixed size in bytes.",
+      "To access the element at index i, the system calculates an offset based on element size.",
+      "The address is computed as: base_address + (index × element_size)."
+    ],
+    "key_points": [
+      "Indexing is address calculation",
+      "Element size is constant",
+      "Offsets are predictable",
+      "No searching is involved"
+    ]
+  },
+  "examples": [
+    "If base address is 1000 and element size is 4 bytes, arr[3] is at 1012.",
+    "Index 0 always refers to the base address."
+  ],
+  "common_misconceptions": [
+    "Indexing involves searching for the element",
+    "Index numbers are stored with elements"
+  ],
+  "ai_scope": {
+    "allowed_topics": [
+      "base address",
+      "offset calculation",
+      "pointer arithmetic (conceptual)"
+    ],
+    "blocked_topics": [
+      "time complexity",
+      "random access",
+      "cache locality"
+    ]
+  }
+}
