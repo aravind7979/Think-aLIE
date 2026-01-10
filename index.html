@@ -1,11 +1,118 @@
-<div id="node-title"></div>
-<div id="node-description"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Think-LIE: Arrays Concept Viewer</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: auto; }
+    h1 { color: #2c3e50; }
+    h2 { color: #34495e; margin-top: 20px; }
+    select { padding: 5px; margin-bottom: 20px; font-size: 16px; }
+    .section { margin-bottom: 20px; }
+    ul { margin-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Think-LIE: Arrays Concept Viewer</h1>
 
-<script>
-fetch('data/concept_graph/arrays/node_11_summary_ai_scope.json')
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById('node-title').innerText = data.title;
-    document.getElementById('node-description').innerText = data.description.core_idea;
-  });
-</script>
+  <!-- Dropdown to select node -->
+  <label for="node-select"><strong>Select Node:</strong></label>
+  <select id="node-select">
+    <option value="">Loading nodes...</option>
+  </select>
+
+  <!-- Node content -->
+  <div class="section">
+    <h2 id="node-title"></h2>
+    <p id="node-core-idea"></p>
+  </div>
+
+  <div class="section">
+    <h3>Explanation</h3>
+    <ul id="node-explanation"></ul>
+  </div>
+
+  <div class="section">
+    <h3>Examples</h3>
+    <ul id="node-examples"></ul>
+  </div>
+
+  <div class="section">
+    <h3>Key Points</h3>
+    <ul id="node-keypoints"></ul>
+  </div>
+
+  <script>
+    const select = document.getElementById('node-select');
+    const title = document.getElementById('node-title');
+    const coreIdea = document.getElementById('node-core-idea');
+    const explanation = document.getElementById('node-explanation');
+    const examples = document.getElementById('node-examples');
+    const keypoints = document.getElementById('node-keypoints');
+
+    // Load index.json first
+    fetch('data/concept_graph/arrays/index.json')
+      .then(res => res.json())
+      .then(indexData => {
+        select.innerHTML = '';
+        indexData.nodes.forEach(nodeFile => {
+          const option = document.createElement('option');
+          option.value = nodeFile;
+          option.innerText = nodeFile.replace('.json','').replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+          select.appendChild(option);
+        });
+
+        // Auto-select first node
+        if (indexData.nodes.length > 0) {
+          loadNode(indexData.nodes[0]);
+        }
+      });
+
+    // Load a node JSON and populate page
+    function loadNode(nodeFile) {
+      fetch('data/concept_graph/arrays/' + nodeFile)
+        .then(res => res.json())
+        .then(data => {
+          title.innerText = data.title;
+          coreIdea.innerText = data.description.core_idea;
+
+          // Populate explanation
+          explanation.innerHTML = '';
+          data.description.explanation.forEach(line => {
+            const li = document.createElement('li');
+            li.innerText = line;
+            explanation.appendChild(li);
+          });
+
+          // Populate examples
+          examples.innerHTML = '';
+          if (data.examples) {
+            data.examples.forEach(line => {
+              const li = document.createElement('li');
+              li.innerText = line;
+              examples.appendChild(li);
+            });
+          }
+
+          // Populate key points
+          keypoints.innerHTML = '';
+          if (data.description.key_points) {
+            data.description.key_points.forEach(line => {
+              const li = document.createElement('li');
+              li.innerText = line;
+              keypoints.appendChild(li);
+            });
+          }
+        });
+    }
+
+    // Event listener for dropdown
+    select.addEventListener('change', (e) => {
+      if (e.target.value) {
+        loadNode(e.target.value);
+      }
+    });
+  </script>
+</body>
+</html>
