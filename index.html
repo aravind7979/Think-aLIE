@@ -1,25 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Think-LIE: Arrays Concept Viewer</title>
+
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: auto; }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
     h1 { color: #2c3e50; }
     h2 { color: #34495e; margin-top: 20px; }
-    select { padding: 5px; margin: 10px 0; font-size: 16px; }
-    button { padding: 5px 10px; margin: 0 5px; font-size: 14px; cursor: pointer; }
+
+    select, button {
+      padding: 6px;
+      margin: 6px 0;
+      font-size: 14px;
+    }
+
     .section { margin-bottom: 20px; }
     ul { margin-left: 20px; }
+
     .nav-buttons { margin-bottom: 20px; }
+
+    /* ---------- AI CHAT UI ---------- */
+
+    #ai-chat-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-size: 28px;
+      background: #2c3e50;
+      color: white;
+      padding: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    #ai-chat-box {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 300px;
+      height: 380px;
+      background: white;
+      border: 1px solid #ccc;
+      display: none;
+      flex-direction: column;
+    }
+
+    #ai-chat-header {
+      background: #2c3e50;
+      color: white;
+      padding: 10px;
+      font-weight: bold;
+    }
+
+    #ai-chat-messages {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      font-size: 14px;
+    }
+
+    #ai-chat-input {
+      border: none;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      outline: none;
+    }
   </style>
 </head>
+
 <body>
+
   <h1>Think-LIE: Arrays Concept Viewer</h1>
 
   <!-- Node Selection -->
-  <label for="node-select"><strong>Select Node:</strong></label>
+  <label><strong>Select Node:</strong></label>
   <select id="node-select"></select>
 
   <div class="nav-buttons">
@@ -48,37 +110,47 @@
     <ul id="node-keypoints"></ul>
   </div>
 
+  <!-- ---------- AI CHAT ---------- -->
+
+  <div id="ai-chat-icon" onclick="toggleChat()">🤖</div>
+
+  <div id="ai-chat-box">
+    <div id="ai-chat-header">Think-LIE AI (Arrays)</div>
+    <div id="ai-chat-messages"></div>
+    <input
+      id="ai-chat-input"
+      placeholder="Ask about arrays..."
+      onkeydown="if(event.key==='Enter') sendMessage()"
+    />
+  </div>
+
+  <!-- ---------- JS ---------- -->
   <script>
-    const select = document.getElementById('node-select');
-    const title = document.getElementById('node-title');
-    const coreIdea = document.getElementById('node-core-idea');
-    const explanation = document.getElementById('node-explanation');
-    const examples = document.getElementById('node-examples');
-    const keypoints = document.getElementById('node-keypoints');
-    const prevBtn = document.getElementById('prev-node');
-    const nextBtn = document.getElementById('next-node');
+    /* ---------- ARRAYS NODE SYSTEM ---------- */
+
+    const select = document.getElementById("node-select");
+    const title = document.getElementById("node-title");
+    const coreIdea = document.getElementById("node-core-idea");
+    const explanation = document.getElementById("node-explanation");
+    const examples = document.getElementById("node-examples");
+    const keypoints = document.getElementById("node-keypoints");
+    const prevBtn = document.getElementById("prev-node");
+    const nextBtn = document.getElementById("next-node");
 
     let nodes = [];
     let currentIndex = 0;
 
-    // Load index.json
-    fetch('./data/concept_graph/arrays/index.json')
+    fetch("./data/concept_graph/arrays/index.json")
       .then(res => res.json())
-      .then(indexData => {
-        nodes = indexData.nodes;
-        select.innerHTML = '';
-        nodes.forEach((nodeFile, idx) => {
-          const option = document.createElement('option');
-          option.value = idx;
-          option.innerText = `Node ${idx+1}: ` + nodeFile.replace('.json','').replace(/_/g,' ');
-          select.appendChild(option);
+      .then(data => {
+        nodes = data.nodes;
+        nodes.forEach((file, i) => {
+          const opt = document.createElement("option");
+          opt.value = i;
+          opt.textContent = `Node ${i + 1}: ${file.replace(".json", "").replace(/_/g, " ")}`;
+          select.appendChild(opt);
         });
-
-        // Load first node by default
-        if(nodes.length > 0){
-            loadNode(0);
-        }
-        
+        loadNode(0);
       });
 
     function loadNode(index) {
@@ -86,148 +158,64 @@
       currentIndex = index;
       select.value = index;
 
-      fetch('./data/concept_graph/arrays/' + nodes[index])
+      fetch("./data/concept_graph/arrays/" + nodes[index])
         .then(res => res.json())
         .then(data => {
-          title.innerText = data.title;
-          coreIdea.innerText = data.description.core_idea;
+          title.textContent = data.title;
+          coreIdea.textContent = data.description.core_idea;
 
-          // Populate explanation
-          explanation.innerHTML = '';
-          data.description.explanation.forEach(line => {
-            const li = document.createElement('li');
-            li.innerText = line;
-            explanation.appendChild(li);
+          explanation.innerHTML = "";
+          data.description.explanation.forEach(e => {
+            explanation.innerHTML += `<li>${e}</li>`;
           });
 
-          // Populate examples
-          examples.innerHTML = '';
-          if (data.examples) {
-            data.examples.forEach(line => {
-              const li = document.createElement('li');
-              li.innerText = line;
-              examples.appendChild(li);
-            });
-          }
+          examples.innerHTML = "";
+          (data.examples || []).forEach(e => {
+            examples.innerHTML += `<li>${e}</li>`;
+          });
 
-          // Populate key points
-          keypoints.innerHTML = '';
-          if (data.description.key_points) {
-            data.description.key_points.forEach(line => {
-              const li = document.createElement('li');
-              li.innerText = line;
-              keypoints.appendChild(li);
-            });
-          }
+          keypoints.innerHTML = "";
+          (data.description.key_points || []).forEach(e => {
+            keypoints.innerHTML += `<li>${e}</li>`;
+          });
         });
     }
 
-    // Dropdown change
-    select.addEventListener('change', (e) => {
-      const selectedIndex = parseInt(e.target.value);
-      if (!isNaN(selectedIndex)) loadNode(selectedIndex);
-    });
+    select.onchange = e => loadNode(+e.target.value);
+    nextBtn.onclick = () => loadNode(currentIndex + 1);
+    prevBtn.onclick = () => loadNode(currentIndex - 1);
 
+    /* ---------- AI CHAT LOGIC (STEP 3) ---------- */
 
-    // Next / Previous buttons
-nextBtn.addEventListener('click', () => {
-  if (currentIndex + 1 < nodes.length) {
-    loadNode(currentIndex + 1);
-  }
-});
+    function toggleChat() {
+      const box = document.getElementById("ai-chat-box");
+      box.style.display = box.style.display === "flex" ? "none" : "flex";
+    }
 
-prevBtn.addEventListener('click', () => {
-  if (currentIndex - 1 >= 0) {
-    loadNode(currentIndex - 1);
-  }
-});
-const chatIcon = document.getElementById("ai-chat-icon");
-const chatWindow = document.getElementById("ai-chat-window");
-const chatInput = document.getElementById("ai-chat-input");
-const chatMessages = document.getElementById("ai-chat-messages");
+    async function sendMessage() {
+      const input = document.getElementById("ai-chat-input");
+      const messages = document.getElementById("ai-chat-messages");
+      const text = input.value.trim();
+      if (!text) return;
 
-chatIcon.onclick = () => {
-  chatWindow.style.display =
-    chatWindow.style.display === "flex" ? "none" : "flex";
-};
+      messages.innerHTML += `<div><b>You:</b> ${text}</div>`;
+      input.value = "";
 
-chatInput.addEventListener("keypress", (e) => {
-  if (e.key === "Enter" && chatInput.value.trim() !== "") {
-    const userMsg = chatInput.value;
-    appendMessage("You", userMsg);
-    chatInput.value = "";
+      try {
+        const res = await fetch("http://127.0.0.1:8000/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
 
-    // Temporary response (until backend is added)
-    appendMessage("Think-LIE AI", 
-      "I understand your question about arrays. AI reasoning will be enabled once the backend is connected."
-    );
-  }
-});
-
-function appendMessage(sender, text) {
-  const div = document.createElement("div");
-  div.innerHTML = `<strong>${sender}:</strong> ${text}`;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
+        const data = await res.json();
+        messages.innerHTML += `<div><b>AI:</b> ${data.reply}</div>`;
+        messages.scrollTop = messages.scrollHeight;
+      } catch {
+        messages.innerHTML += `<div><b>AI:</b> Backend not reachable.</div>`;
+      }
+    }
   </script>
-  <!-- AI Chat Icon -->
-<div id="ai-chat-icon">🤖</div>
 
-<!-- AI Chat Window -->
-<div id="ai-chat-window">
-  <div id="ai-chat-header">Think-LIE AI</div>
-  <div id="ai-chat-messages"></div>
-  <input type="text" id="ai-chat-input" placeholder="Ask about Arrays..." />
-</div>
-
-<style>
-  #ai-chat-icon {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #2c3e50;
-    color: white;
-    padding: 12px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 20px;
-  }
-
-  #ai-chat-window {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 300px;
-    height: 400px;
-    background: white;
-    border: 1px solid #ccc;
-    display: none;
-    flex-direction: column;
-  }
-
-  #ai-chat-header {
-    background: #2c3e50;
-    color: white;
-    padding: 10px;
-    font-weight: bold;
-  }
-
-  #ai-chat-messages {
-    flex: 1;
-    padding: 10px;
-    overflow-y: auto;
-    font-size: 14px;
-  }
-
-  #ai-chat-input {
-    border: none;
-    border-top: 1px solid #ccc;
-    padding: 10px;
-    width: 100%;
-    outline: none;
-  }
-</style>
 </body>
 </html>
