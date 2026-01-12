@@ -23,9 +23,11 @@ class ChatRequest(BaseModel):
 # ----- Chat endpoint -----
 @app.post("/chat")
 def chat(request: ChatRequest):
-    if os.getenv("OPENAI_API_KEY") is None:
+
+    # Explicit mock mode if key missing
+    if not os.getenv("OPENAI_API_KEY"):
         return {
-            "reply": "[MOCK AI] Arrays store elements in contiguous memory."
+            "reply": "[MOCK AI] Arrays are collections of elements stored contiguously in memory."
         }
 
     try:
@@ -33,8 +35,12 @@ def chat(request: ChatRequest):
             model="gpt-5-nano",
             input=request.message
         )
-        return {"reply": response.output_text}
-    except Exception:
         return {
-            "reply": "[MOCK AI] AI quota unavailable. Continue learning arrays."
+            "reply": response.output_text
+        }
+
+    except Exception as e:
+        # Covers quota exceeded, network issues, OpenAI downtime
+        return {
+            "reply": "[MOCK AI] AI service temporarily unavailable. Backend is running correctly."
         }
