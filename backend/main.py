@@ -2,19 +2,21 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
-from openai import OpenAI
+from google import genai
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize Gemini client
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
 app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"status": "Think-LIE backend running"}
+    return {"status": "Think-LIE backend running (Gemini)"}
 
 # ----- Chat schema -----
 class ChatRequest(BaseModel):
@@ -24,23 +26,23 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 def chat(request: ChatRequest):
 
-    # Explicit mock mode if key missing
-    if not os.getenv("OPENAI_API_KEY"):
+    # Mock mode if API key missing
+    if not os.getenv("GEMINI_API_KEY"):
         return {
-            "reply": "[MOCK AI] Arrays are collections of elements stored contiguously in memory."
+            "reply": "[MOCK AI] Arrays store elements in contiguous memory locations."
         }
 
     try:
-        response = client.responses.create(
-            model="gpt-5-nano",
-            input=request.message
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=request.message
         )
+
         return {
-            "reply": response.output_text
+            "reply": response.text
         }
 
-    except Exception as e:
-        # Covers quota exceeded, network issues, OpenAI downtime
+    except Exception:
         return {
-            "reply": "[MOCK AI] AI service temporarily unavailable. Backend is running correctly."
+            "reply": "[MOCK AI] Gemini API unavailable or quota exceeded."
         }
