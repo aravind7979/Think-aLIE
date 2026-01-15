@@ -16,7 +16,7 @@ app = FastAPI()
 
 @app.get("/")
 def root():
-    return {"status": "Think-LIE backend running (Gemini)"}
+    return {"status": "Think-LIE backend running"}
 
 # ----- Chat schema -----
 class ChatRequest(BaseModel):
@@ -34,7 +34,7 @@ def chat(request: ChatRequest):
 
     try:
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash",
             contents=request.message
         )
 
