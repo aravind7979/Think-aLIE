@@ -166,17 +166,17 @@
 
           explanation.innerHTML = "";
           data.description.explanation.forEach(e => {
-            explanation.innerHTML += `<li>${e}</li>`;
+            explanation.insertAdjacentHTML('beforeend', `<li>${e}</li>`);
           });
 
           examples.innerHTML = "";
           (data.examples || []).forEach(e => {
-            examples.innerHTML += `<li>${e}</li>`;
+            examples.insertAdjacentHTML('beforeend', `<li>${e}</li>`);
           });
 
           keypoints.innerHTML = "";
           (data.description.key_points || []).forEach(e => {
-            keypoints.innerHTML += `<li>${e}</li>`;
+            keypoints.insertAdjacentHTML('beforeend', `<li>${e}</li>`);
           });
         });
     }
@@ -185,7 +185,7 @@
     nextBtn.onclick = () => loadNode(currentIndex + 1);
     prevBtn.onclick = () => loadNode(currentIndex - 1);
 
-    /* ---------- AI CHAT LOGIC (STEP 3) ---------- */
+    /* ---------- AI CHAT LOGIC ---------- */
 
     function toggleChat() {
       const box = document.getElementById("ai-chat-box");
@@ -198,21 +198,26 @@
       const text = input.value.trim();
       if (!text) return;
 
-      messages.innerHTML += `<div><b>You:</b> ${text}</div>`;
+      messages.insertAdjacentHTML('beforeend', `<div><b>You:</b> ${text}</div>`);
       input.value = "";
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/chat", {
+        const res = await fetch("https://aravind7979-think-lie-backend.hf.space/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: text })
         });
 
+        if (!res.ok) throw new Error("HTTP error " + res.status);
+
         const data = await res.json();
-        messages.innerHTML += `<div><b>AI:</b> ${data.reply}</div>`;
+        messages.insertAdjacentHTML('beforeend', `<div><b>AI:</b> ${data.reply}</div>`);
         messages.scrollTop = messages.scrollHeight;
-      } catch {
-        messages.innerHTML += `<div><b>AI:</b> Backend not reachable.</div>`;
+
+      } catch (err) {
+        console.error(err);
+        messages.insertAdjacentHTML('beforeend', `<div><b>AI:</b> Backend not reachable.</div>`);
+        messages.scrollTop = messages.scrollHeight;
       }
     }
   </script>

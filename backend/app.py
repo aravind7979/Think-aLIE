@@ -12,7 +12,7 @@ load_dotenv()
 # Initialize Gemini client
 # Note: On Hugging Face, ensure you added GEMINI_API_KEY in Settings > Secrets
 api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key)
+client = genai.Client(api_key=api_key) if api_key else None
 
 app = FastAPI()
 
@@ -37,7 +37,7 @@ def root():
 @app.post("/chat")
 def chat(request: ChatRequest):
     # Mock mode if API key missing
-    if not api_key:
+    if not client:
         return {
             "reply": "[MOCK AI] Think-LIE: Please set your Gemini API Key in the backend secrets."
         }
