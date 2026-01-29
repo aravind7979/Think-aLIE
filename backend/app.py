@@ -1,63 +1,155 @@
 import os
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
+from jose import jwt, JWTError
+from sqlalchemy.orm import Session
+from typing import Optional
 
-# Load environment variables (locally from .env, on HF from 'Secrets')
+# --- DB & ROUTERS ---
+from database import Base, engine, SessionLocal
+from auth import router as auth_router
+from models import User, ChatMessage
+
+# Load environment variables
 load_dotenv()
 
 # Initialize Gemini client
-# Note: On Hugging Face, ensure you added GEMINI_API_KEY in Settings > Secrets
 api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
-app = FastAPI()
+# Create FastAPI app
+app = FastAPI(title="Think-LIE Backend")
 
-# --- 1. CONFIGURE CORS ---
-# This allows your GitHub Pages frontend to access this API
+# --- CREATE DATABASE TABLES ---
+Base.metadata.create_all(bind=engine)
+
+# --- CORS CONFIG ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # For testing, "*" allows all. Replace with your GitHub URL for better security.
+    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Chat schema
+# --- ROUTERS ---
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+
+# --- DEPENDENCIES ---
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    """Verify JWT token from Authorization header and return user"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header missing")
+    
+    try:
+        # Extract token from "Bearer <token>"
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authorization header format")
+        
+        token = parts[1]
+        SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this")
+        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+        user_id = int(payload.get("sub"))
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
+
+# --- SCHEMAS ---
 class ChatRequest(BaseModel):
     message: str
 
+# --- ROOT ---
 @app.get("/")
 def root():
-    return {"status": "Think-LIE backend is live and running"}
+    return {"status": "Think-LIE backend is live and running", "version": "1.0.0"}
 
-# --- 2. CHAT ENDPOINT ---
+# --- CHAT ENDPOINT (matches your original structure) ---
 @app.post("/chat")
-def chat(request: ChatRequest):
-    # Mock mode if API key missing
+def chat(request: ChatRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Send a message and get AI response"""
+    
+    # Save user message to database
+    user_message = ChatMessage(
+        user_id=user.id,
+        role="user",
+        content=request.message
+    )
+    db.add(user_message)
+    db.commit()
+    
+    # Get AI response
     if not client:
-        return {
-            "reply": "[MOCK AI] Think-LIE: Please set your Gemini API Key in the backend secrets."
-        }
+        ai_response = f"[Think-LIE] I received your message: '{request.message}'. However, Gemini API key is not configured."
+    else:
+        try:
+            response = client.models.generate_content(
+                model="gemini-2.0-flash-exp",
+                contents=request.message
+            )
+            ai_response = response.text
+        except Exception as e:
+            ai_response = f"[Think-LIE Error]: {str(e)}"
+    
+    # Save AI response to database
+    assistant_message = ChatMessage(
+        user_id=user.id,
+        role="assistant",
+        content=ai_response
+    )
+    db.add(assistant_message)
+    db.commit()
+    
+    return {"reply": ai_response}
 
-    try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=request.message
-        )
+# --- GET CHAT HISTORY ---
+@app.get("/chat/history")
+def get_chat_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get chat history for the current user"""
+    
+    messages = db.query(ChatMessage).filter(
+        ChatMessage.user_id == user.id
+    ).order_by(ChatMessage.created_at).all()
+    
+    return {
+        "messages": [
+            {
+                "id": msg.id,
+                "role": msg.role,
+                "content": msg.content,
+                "created_at": msg.created_at.isoformat()
+            }
+            for msg in messages
+        ]
+    }
 
-        return {
-            "reply": response.text
-        }
+# --- CLEAR CHAT HISTORY ---
+@app.delete("/chat/clear")
+def clear_chat_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Clear all chat messages for the current user"""
+    
+    db.query(ChatMessage).filter(ChatMessage.user_id == user.id).delete()
+    db.commit()
+    
+    return {"message": "Chat history cleared successfully"}
 
-    except Exception as e:
-        return {
-            "reply": f"[Think-LIE Error]: {str(e)}"
-        }
-
-# --- 3. CONFIGURE FOR HUGGING FACE ---
+# --- HF ENTRYPOINT ---
 if __name__ == "__main__":
-    # Port 7860 is mandatory for Hugging Face Spaces
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    port = int(os.getenv("PORT", 7860))
+    uvicorn.run(app, host="0.0.0.0", port=port)
