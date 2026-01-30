@@ -3,7 +3,7 @@ import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
+from typing import  Optional
 
 import google.generativeai as genai
 from jose import jwt, JWTError
