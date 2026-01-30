@@ -17,11 +17,17 @@ from models import User, ChatMessage
 # Load environment variables
 load_dotenv()
 
-# Initialize Gemini client
+# --- GEMINI CONFIG (CORRECT SDK USAGE) ---
 api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key) if api_key else None
+if not api_key:
+    raise RuntimeError("GEMINI_API_KEY is not set")
 
-# Create FastAPI app
+genai.configure(api_key=api_key)
+
+# Use a stable model supported by google-generativeai
+model = genai.GenerativeModel("gemini-pro")
+
+# --- FASTAPI APP ---
 app = FastAPI(title="Think-LIE Backend")
 
 # --- CREATE DATABASE TABLES ---
@@ -30,7 +36,7 @@ Base.metadata.create_all(bind=engine)
 # --- CORS CONFIG ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=["*"],  # tighten in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -47,29 +53,32 @@ def get_db():
     finally:
         db.close()
 
-def get_current_user(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    """Verify JWT token from Authorization header and return user"""
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    db: Session = Depends(get_db)
+):
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
-    
+
     try:
-        # Extract token from "Bearer <token>"
         parts = authorization.split()
         if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise HTTPException(status_code=401, detail="Invalid authorization header format")
-        
+            raise HTTPException(status_code=401, detail="Invalid authorization header")
+
         token = parts[1]
         SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this")
         payload = jwt.decode(token, SECRET, algorithms=["HS256"])
+
         user_id = int(payload.get("sub"))
         user = db.query(User).filter(User.id == user_id).first()
+
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
+
         return user
+
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-    except Exception as e:
-        raise HTTPException(status_code=401, detail=f"Authentication failed: {str(e)}")
 
 # --- SCHEMAS ---
 class ChatRequest(BaseModel):
@@ -78,14 +87,19 @@ class ChatRequest(BaseModel):
 # --- ROOT ---
 @app.get("/")
 def root():
-    return {"status": "Think-LIE backend is live and running", "version": "1.0.0"}
+    return {
+        "status": "Think-LIE backend is live and running",
+        "version": "1.0.0"
+    }
 
-# --- CHAT ENDPOINT (matches your original structure) ---
+# --- CHAT ENDPOINT ---
 @app.post("/chat")
-def chat(request: ChatRequest, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Send a message and get AI response"""
-    
-    # Save user message to database
+def chat(
+    request: ChatRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Save user message
     user_message = ChatMessage(
         user_id=user.id,
         role="user",
@@ -93,21 +107,15 @@ def chat(request: ChatRequest, user: User = Depends(get_current_user), db: Sessi
     )
     db.add(user_message)
     db.commit()
-    
-    # Get AI response
-    if not client:
-        ai_response = f"[Think-LIE] I received your message: '{request.message}'. However, Gemini API key is not configured."
-    else:
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-exp",
-                contents=request.message
-            )
-            ai_response = response.text
-        except Exception as e:
-            ai_response = f"[Think-LIE Error]: {str(e)}"
-    
-    # Save AI response to database
+
+    # Generate AI response (CORRECT GEMINI CALL)
+    try:
+        response = model.generate_content(request.message)
+        ai_response = response.text
+    except Exception as e:
+        ai_response = f"[Think-LIE Error] {str(e)}"
+
+    # Save assistant message
     assistant_message = ChatMessage(
         user_id=user.id,
         role="assistant",
@@ -115,18 +123,22 @@ def chat(request: ChatRequest, user: User = Depends(get_current_user), db: Sessi
     )
     db.add(assistant_message)
     db.commit()
-    
+
     return {"reply": ai_response}
 
-# --- GET CHAT HISTORY ---
+# --- CHAT HISTORY ---
 @app.get("/chat/history")
-def get_chat_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Get chat history for the current user"""
-    
-    messages = db.query(ChatMessage).filter(
-        ChatMessage.user_id == user.id
-    ).order_by(ChatMessage.created_at).all()
-    
+def get_chat_history(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    messages = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.user_id == user.id)
+        .order_by(ChatMessage.created_at)
+        .all()
+    )
+
     return {
         "messages": [
             {
@@ -139,14 +151,14 @@ def get_chat_history(user: User = Depends(get_current_user), db: Session = Depen
         ]
     }
 
-# --- CLEAR CHAT HISTORY ---
+# --- CLEAR CHAT ---
 @app.delete("/chat/clear")
-def clear_chat_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Clear all chat messages for the current user"""
-    
+def clear_chat_history(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     db.query(ChatMessage).filter(ChatMessage.user_id == user.id).delete()
     db.commit()
-    
     return {"message": "Chat history cleared successfully"}
 
 # --- HF ENTRYPOINT ---
