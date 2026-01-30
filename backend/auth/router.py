@@ -5,7 +5,7 @@ from ..models import User
 from .schemas import SignupRequest, LoginRequest
 from .security import hash_password, verify_password, create_access_token
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(tags=["auth"])
 
 def get_db():
     db = SessionLocal()
