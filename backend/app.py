@@ -3,49 +3,59 @@ import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
+
 import google.generativeai as genai
-from dotenv import load_dotenv
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
-from typing import Optional
 
 # --- DB & ROUTERS ---
 from database import Base, engine, SessionLocal
 from auth import router as auth_router
 from models import User, ChatMessage
 
-# Load environment variables
-load_dotenv()
-
-# --- GEMINI CONFIG (CORRECT SDK USAGE) ---
+# -------------------------------------------------
+# GEMINI CONFIG (SAFE FOR HUGGING FACE)
+# -------------------------------------------------
 api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise RuntimeError("GEMINI_API_KEY is not set")
 
-genai.configure(api_key=api_key)
+if api_key:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-pro")
+else:
+    model = None  # backend must still run
 
-# Use a stable model supported by google-generativeai
-model = genai.GenerativeModel("gemini-pro")
-
-# --- FASTAPI APP ---
+# -------------------------------------------------
+# FASTAPI APP
+# -------------------------------------------------
 app = FastAPI(title="Think-LIE Backend")
 
-# --- CREATE DATABASE TABLES ---
-Base.metadata.create_all(bind=engine)
+# -------------------------------------------------
+# STARTUP EVENT (DB SAFE INIT)
+# -------------------------------------------------
+@app.on_event("startup")
+def startup():
+    Base.metadata.create_all(bind=engine)
 
-# --- CORS CONFIG ---
+# -------------------------------------------------
+# CORS
+# -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production
+    allow_origins=["*"],  # tighten later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# --- ROUTERS ---
+# -------------------------------------------------
+# ROUTERS
+# -------------------------------------------------
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 
-# --- DEPENDENCIES ---
+# -------------------------------------------------
+# DEPENDENCIES
+# -------------------------------------------------
 def get_db():
     db = SessionLocal()
     try:
@@ -53,9 +63,10 @@ def get_db():
     finally:
         db.close()
 
+
 def get_current_user(
     authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header missing")
@@ -66,7 +77,7 @@ def get_current_user(
             raise HTTPException(status_code=401, detail="Invalid authorization header")
 
         token = parts[1]
-        SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this")
+        SECRET = os.getenv("JWT_SECRET", "change-this-secret")
         payload = jwt.decode(token, SECRET, algorithms=["HS256"])
 
         user_id = int(payload.get("sub"))
@@ -80,57 +91,72 @@ def get_current_user(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-# --- SCHEMAS ---
+
+# -------------------------------------------------
+# SCHEMAS
+# -------------------------------------------------
 class ChatRequest(BaseModel):
     message: str
 
-# --- ROOT ---
+
+# -------------------------------------------------
+# ROOT
+# -------------------------------------------------
 @app.get("/")
 def root():
     return {
-        "status": "Think-LIE backend is live and running",
-        "version": "1.0.0"
+        "status": "Think-LIE backend is live",
+        "version": "1.0.0",
     }
 
-# --- CHAT ENDPOINT ---
+
+# -------------------------------------------------
+# CHAT ENDPOINT
+# -------------------------------------------------
 @app.post("/chat")
 def chat(
     request: ChatRequest,
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     # Save user message
-    user_message = ChatMessage(
+    user_msg = ChatMessage(
         user_id=user.id,
         role="user",
-        content=request.message
+        content=request.message,
     )
-    db.add(user_message)
+    db.add(user_msg)
     db.commit()
 
-    # Generate AI response (CORRECT GEMINI CALL)
-    try:
-        response = model.generate_content(request.message)
-        ai_response = response.text
-    except Exception as e:
-        ai_response = f"[Think-LIE Error] {str(e)}"
+    # Generate AI response
+    if not model:
+        ai_response = "[Think-LIE] Gemini API key not configured."
+    else:
+        try:
+            response = model.generate_content(request.message)
+            ai_response = response.text
+        except Exception as e:
+            ai_response = f"[Think-LIE Error] {str(e)}"
 
     # Save assistant message
-    assistant_message = ChatMessage(
+    assistant_msg = ChatMessage(
         user_id=user.id,
         role="assistant",
-        content=ai_response
+        content=ai_response,
     )
-    db.add(assistant_message)
+    db.add(assistant_msg)
     db.commit()
 
     return {"reply": ai_response}
 
-# --- CHAT HISTORY ---
+
+# -------------------------------------------------
+# CHAT HISTORY
+# -------------------------------------------------
 @app.get("/chat/history")
 def get_chat_history(
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     messages = (
         db.query(ChatMessage)
@@ -142,26 +168,32 @@ def get_chat_history(
     return {
         "messages": [
             {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
-                "created_at": msg.created_at.isoformat()
+                "id": m.id,
+                "role": m.role,
+                "content": m.content,
+                "created_at": m.created_at.isoformat(),
             }
-            for msg in messages
+            for m in messages
         ]
     }
 
-# --- CLEAR CHAT ---
+
+# -------------------------------------------------
+# CLEAR CHAT
+# -------------------------------------------------
 @app.delete("/chat/clear")
 def clear_chat_history(
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     db.query(ChatMessage).filter(ChatMessage.user_id == user.id).delete()
     db.commit()
     return {"message": "Chat history cleared successfully"}
 
-# --- HF ENTRYPOINT ---
+
+# -------------------------------------------------
+# HUGGING FACE ENTRYPOINT
+# -------------------------------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 7860))
     uvicorn.run(app, host="0.0.0.0", port=port)
