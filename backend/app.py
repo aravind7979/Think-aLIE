@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 # --- DB & ROUTERS ---
 from database import Base, engine, SessionLocal
-from auth import router as auth_router
+from auth.router import router as auth_router
 from models import User, ChatMessage
 
 # -------------------------------------------------
