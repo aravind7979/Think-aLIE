@@ -51,7 +51,7 @@ app.add_middleware(
 # -------------------------------------------------
 # ROUTERS
 # -------------------------------------------------
-app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+app.include_router(auth_router, prefix="/auth", tags=["auth"]) 
 
 # -------------------------------------------------
 # DEPENDENCIES
