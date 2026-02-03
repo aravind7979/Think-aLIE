@@ -1,3 +1,4 @@
+cat > /home/claude/frontend/login.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -202,12 +203,12 @@
         </div>
 
         <div class="signup-link">
-            Don't have an account? <a href="signup.html">Sign up</a>
+            Don't have an account? <a href="index.html">Sign up</a>
         </div>
     </div>
 
     <script>
-        const API_URL = "https://aravind7979-think-lie-backend.hf.space";
+        const API_URL = "http://localhost:8000";
 
         function showError(message) {
             const errorDiv = document.getElementById("errorMessage");
@@ -257,7 +258,7 @@
                     
                     showSuccess("Login successful! Redirecting...");
                     setTimeout(() => {
-                        window.location.href = "index.html";
+                        window.location.href = "home.html";
                     }, 1000);
                 } else {
                     showError(data.detail || "Invalid email or password");
@@ -276,9 +277,10 @@
         window.addEventListener('load', () => {
             const token = localStorage.getItem('token');
             if (token) {
-                window.location.href = 'index.html';
+                window.location.href = 'home.html';
             }
         });
     </script>
 </body>
 </html>
+HTMLEOF

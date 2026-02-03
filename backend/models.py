@@ -12,7 +12,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationship to chat messages
-    messages = relationship("ChatMessage", back_populates="user")
+    messages = relationship("ChatMessage", back_populates="user", cascade="all, delete-orphan")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"

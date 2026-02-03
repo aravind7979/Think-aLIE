@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..database import SessionLocal
-from ..models import User
-from .schemas import SignupRequest, LoginRequest
+from database import SessionLocal
+from models import User
+from .schemas import SignupRequest, LoginRequest, TokenResponse
 from .security import hash_password, verify_password, create_access_token
 
-router = APIRouter(tags=["auth"])
+router = APIRouter()
 
 def get_db():
     db = SessionLocal()
@@ -14,25 +14,39 @@ def get_db():
     finally:
         db.close()
 
-@router.post("/signup")
+@router.post("/signup", response_model=TokenResponse)
 def signup(req: SignupRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == req.email).first():
-        raise HTTPException(400, "Email already registered")
+    """Register a new user"""
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == req.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
+    # Create new user
     user = User(
         email=req.email,
         password_hash=hash_password(req.password)
     )
     db.add(user)
     db.commit()
+    db.refresh(user)
 
-    return {"status": "account_created"}
+    # Create access token
+    access_token = create_access_token({"sub": str(user.id)})
 
-@router.post("/login")
+    return TokenResponse(access_token=access_token)
+
+@router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
+    """Login existing user"""
+    # Find user
     user = db.query(User).filter(User.email == req.email).first()
+    
+    # Verify password
     if not user or not verify_password(req.password, user.password_hash):
-        raise HTTPException(401, "Invalid credentials")
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"sub": str(user.id)})
-    return {"access_token": token}
+    # Create access token
+    access_token = create_access_token({"sub": str(user.id)})
+
+    return TokenResponse(access_token=access_token)
