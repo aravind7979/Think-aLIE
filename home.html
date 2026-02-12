@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatGPT - Think-LIE</title>
+    <title>Think-LIE A Language Intelligence Engine</title>
     <style>
         * {
             margin: 0;
@@ -49,10 +49,23 @@
             color: #000;
         }
 
-        .logo svg {
-            width: 24px;
-            height: 24px;
-        }
+        .logo-img {
+    width: 32px;            /* Adjust size as needed */
+    height: 32px;           /* Keep it square */
+    border-radius: 50%;     /* Makes it circular */
+    object-fit: cover;      /* Fill nicely */
+    background-color: black; /* Black circular background */
+    padding: 4px;           /* Optional: space between image and circle edge */
+}
+
+        .ai-avatar-img {
+    width: 30px;            /* Adjust size as needed */
+    height: 30px;           /*Keep it square */
+    border-radius: 50%;     /* Makes it circular */
+    object-fit: cover;      /* Fill nicely */
+    background-color: black; /* Black circular background */
+    padding: 2px;           /* Optional: space between image and circle edge */
+}
 
         .new-chat-btn {
             background: white;
@@ -71,6 +84,156 @@
 
         .new-chat-btn:hover {
             background: #f3f4f6;
+        }
+
+        .section-header {
+            padding: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            user-select: none;
+        }
+
+        .section-header:hover {
+            background: #f3f4f6;
+            border-radius: 8px;
+        }
+
+        .section-arrow {
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+
+        .section-arrow.expanded {
+            transform: rotate(90deg);
+        }
+
+        .section-content {
+            display: none;
+            padding: 8px 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .section-content.expanded {
+            display: block;
+        }
+
+        .upload-btn {
+            width: 100%;
+            padding: 8px 12px;
+            background: white;
+            border: 1px dashed #d1d5db;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+
+        .upload-btn:hover {
+            background: #f9fafb;
+            border-color: #9ca3af;
+        }
+
+        .image-item {
+            margin-bottom: 8px;
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .image-item video {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+
+        .image-remove {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .image-remove:hover {
+            background: rgba(0,0,0,0.8);
+        }
+
+        .project-item {
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #374151;
+            position: relative;
+            word-break: break-word;
+        }
+
+        .project-remove {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: #fee;
+            color: #c00;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 10px;
+        }
+
+        .project-remove:hover {
+            background: #fcc;
+        }
+
+        .add-project-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            margin-bottom: 6px;
+            box-sizing: border-box;
+        }
+
+        .add-project-btn {
+            width: 100%;
+            padding: 6px 12px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+
+        .add-project-btn:hover {
+            background: #0d7a5f;
         }
 
         .sidebar-section {
@@ -119,8 +282,8 @@
         .user-avatar {
             width: 32px;
             height: 32px;
-            border-radius: 6px;
-            background: linear-gradient(135deg, #10a37f 0%, #0d7a5f 100%);
+            border-radius: 50%;
+            background: #2ba6dc;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -235,12 +398,13 @@
         }
 
         .message.user .message-avatar {
-            background: linear-gradient(135deg, #10a37f 0%, #0d7a5f 100%);
+            background: #2ba6dc;
             color: white;
+            border-radius: 50%;
         }
 
         .message.assistant .message-avatar {
-            background: #10a37f;
+            background: transparent;
             color: white;
         }
 
@@ -415,6 +579,46 @@
                 transform: translateY(-10px);
             }
         }
+
+        /* Image modal styles */
+        .image-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .image-modal-overlay.open {
+            display: flex;
+        }
+        .image-modal {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+        .image-modal img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .image-modal-close {
+            position: absolute;
+            top: -18px;
+            right: -18px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            font-size: 18px;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+        }
     </style>
 </head>
 <body>
@@ -423,10 +627,8 @@
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <svg viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M37.5324 16.8707C37.9808 15.5241 38.1363 14.0974 37.9886 12.6859C37.8409 11.2744 37.3934 9.91076 36.676 8.68622C35.6126 6.83404 33.9882 5.3676 32.0373 4.4985C30.0864 3.62941 27.9098 3.40259 25.8215 3.85078C24.8796 2.7893 23.7219 1.94125 22.4257 1.36341C21.1295 0.785575 19.7249 0.491269 18.3058 0.500197C16.1708 0.495044 14.0893 1.16803 12.3614 2.42214C10.6335 3.67624 9.34853 5.44666 8.6917 7.47815C7.30085 7.76286 5.98686 8.3414 4.8377 9.17505C3.68854 10.0087 2.73073 11.0782 2.02839 12.312C0.956464 14.1591 0.498905 16.2988 0.721698 18.4228C0.944492 20.5467 1.83612 22.5449 3.268 24.1293C2.81966 25.4759 2.66413 26.9026 2.81182 28.3141C2.95951 29.7256 3.40701 31.0892 4.12437 32.3138C5.18791 34.1659 6.8123 35.6322 8.76321 36.5013C10.7141 37.3704 12.8907 37.5973 14.9789 37.1492C15.9208 38.2107 17.0786 39.0587 18.3747 39.6366C19.6709 40.2144 21.0755 40.5087 22.4946 40.4998C24.6307 40.5054 26.7133 39.8321 28.4418 38.5772C30.1704 37.3223 31.4556 35.5506 32.1119 33.5179C33.5027 33.2332 34.8167 32.6547 35.9659 31.821C37.115 30.9874 38.0728 29.9178 38.7752 28.684C39.8458 26.8371 40.3023 24.6979 40.0789 22.5748C39.8556 20.4517 38.9639 18.4544 37.5324 16.8707Z" fill="currentColor"/>
-                    </svg>
-                    <span>ChatGPT</span>
+                    <img src = "myLogo.png" alt="Logo" class = "logo-img">
+                    <span>Think-LIE</span>
                 </div>
             </div>
 
@@ -437,6 +639,28 @@
                 </svg>
                 New chat
             </button>
+
+            <!-- Images Section -->
+            <div class="section-header" onclick="toggleSection('images')">
+                <span class="section-arrow" id="imagesArrow">▶</span>
+                <span>Images</span>
+            </div>
+            <div class="section-content" id="imagesContent">
+                <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none;" onchange="handleMediaUpload(event)">
+                <button class="upload-btn" onclick="document.getElementById('mediaInput').click()">+ Add Image/Video</button>
+                <div id="imagesList"></div>
+            </div>
+
+            <!-- Projects Section -->
+            <div class="section-header" onclick="toggleSection('projects')">
+                <span class="section-arrow" id="projectsArrow">▶</span>
+                <span>Projects</span>
+            </div>
+            <div class="section-content" id="projectsContent">
+                <textarea class="add-project-input" id="projectInput" placeholder="Add project link or note..." rows="2"></textarea>
+                <button class="add-project-btn" onclick="addProject()">Add Project</button>
+                <div id="projectsList"></div>
+            </div>
 
             <div class="sidebar-section">
                 <div class="chat-item active">Ready when you are.</div>
@@ -494,21 +718,34 @@
         </div>
     </div>
 
+    <div class="image-modal-overlay" id="imageModal" onclick="closeImageModal(event)">
+        <div class="image-modal" onclick="event.stopPropagation()">
+            <button class="image-modal-close" onclick="closeImageModal()">✕</button>
+            <img id="imageModalImg" src="" alt="Full Image">
+        </div>
+    </div>
+    <div class="image-modal-overlay" id="videoModal" onclick="closeVideoModal(event)">
+        <div class="image-modal" onclick="event.stopPropagation()">
+            <button class="image-modal-close" onclick="closeVideoModal()">✕</button>
+            <video id="videoModalVideo" src="" controls style="max-width:100%; max-height:100%; border-radius:8px;"></video>
+        </div>
+    </div>
+
     <script>
-        const API_URL = " http://127.0.0.1:8000";
+        const API_URL = "http://127.0.0.1:8000";
         
         let userToken = null;
         let userEmail = null;
 
         // Check authentication on load
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             userToken = localStorage.getItem('token');
             userEmail = localStorage.getItem('user_email');
             
-            if (!userToken) {
-                window.location.href = 'signup.html';
-                return;
-            }
+            // if (!userToken) {
+            //     window.location.href = 'signup.html';
+            //     return;
+            // }
             
             // Set user info
             if (userEmail) {
@@ -518,15 +755,85 @@
                 userAvatar.textContent = userEmail[0].toUpperCase();
             }
             
+            // Migrate localStorage data if needed
+            await migrateLocalStorageData();
+            
             // Load chat history
             loadChatHistory();
+
+            // Load images/videos and projects
+            displayMedia();
+            displayProjects();
         });
+
+        // --- Migration helper ---
+        async function migrateLocalStorageData() {
+            const localMedia = JSON.parse(localStorage.getItem('media') || '[]');
+            const localProjects = JSON.parse(localStorage.getItem('projects') || '[]');
+            
+            // Migrate projects
+            if (localProjects.length > 0) {
+                try {
+                    for (const proj of localProjects) {
+                        await fetch(`${API_URL}/user/projects`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${userToken}`
+                            },
+                            body: JSON.stringify(proj)
+                        });
+                    }
+                    console.log(`✅ Migrated ${localProjects.length} projects`);
+                    localStorage.removeItem('projects');
+                } catch (error) {
+                    console.error('❌ Project migration failed:', error);
+                }
+            }
+            
+            // Migrate media (convert DataURLs to files and upload)
+            if (localMedia.length > 0) {
+                try {
+                    for (const item of localMedia) {
+                        const blob = dataURLtoBlob(item.src);
+                        const file = new File([blob], `migrated_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                        const formData = new FormData();
+                        formData.append('file', file);
+                        
+                        await fetch(`${API_URL}/user/media`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${userToken}`
+                            },
+                            body: formData
+                        });
+                    }
+                    console.log(`✅ Migrated ${localMedia.length} media items`);
+                    localStorage.removeItem('media');
+                } catch (error) {
+                    console.error('❌ Media migration failed:', error);
+                }
+            }
+        }
+
+        // Helper to convert DataURL to Blob
+        function dataURLtoBlob(dataurl) {
+            const arr = dataurl.split(',');
+            const mime = arr[0].match(/:(.*?);/)[1];
+            const bstr = atob(arr[1]);
+            let n = bstr.length;
+            const u8arr = new Uint8Array(n);
+            while(n--) {
+                u8arr[n] = bstr.charCodeAt(n);
+            }
+            return new Blob([u8arr], {type:mime});
+        }
 
         // Logout function
         function logout() {
             localStorage.removeItem('token');
             localStorage.removeItem('user_email');
-            window.location.href = 'signup.html';
+            window.location.href = 'login.html';
         }
 
         // Auto-resize textarea
@@ -557,7 +864,15 @@
             }
         }
 
-        // Load chat history
+        // Handle Ctrl+Shift+O for new chat
+        document.addEventListener('keydown', (event) => {
+            if (event.ctrlKey && event.shiftKey && event.key === 'O') {
+                event.preventDefault();
+                newChat();
+            }
+        });
+
+        // Load chat history from backend
         async function loadChatHistory() {
             try {
                 const response = await fetch(`${API_URL}/chat/history`, {
@@ -607,9 +922,7 @@
             } else {
                 messageDiv.innerHTML = `
                     <div class="message-avatar">
-                        <svg viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
-                            <path d="M37.5324 16.8707C37.9808 15.5241 38.1363 14.0974 37.9886 12.6859C37.8409 11.2744 37.3934 9.91076 36.676 8.68622C35.6126 6.83404 33.9882 5.3676 32.0373 4.4985C30.0864 3.62941 27.9098 3.40259 25.8215 3.85078C24.8796 2.7893 23.7219 1.94125 22.4257 1.36341C21.1295 0.785575 19.7249 0.491269 18.3058 0.500197C16.1708 0.495044 14.0893 1.16803 12.3614 2.42214C10.6335 3.67624 9.34853 5.44666 8.6917 7.47815C7.30085 7.76286 5.98686 8.3414 4.8377 9.17505C3.68854 10.0087 2.73073 11.0782 2.02839 12.312C0.956464 14.1591 0.498905 16.2988 0.721698 18.4228C0.944492 20.5467 1.83612 22.5449 3.268 24.1293C2.81966 25.4759 2.66413 26.9026 2.81182 28.3141C2.95951 29.7256 3.40701 31.0892 4.12437 32.3138C5.18791 34.1659 6.8123 35.6322 8.76321 36.5013C10.7141 37.3704 12.8907 37.5973 14.9789 37.1492C15.9208 38.2107 17.0786 39.0587 18.3747 39.6366C19.6709 40.2144 21.0755 40.5087 22.4946 40.4998C24.6307 40.5054 26.7133 39.8321 28.4418 38.5772C30.1704 37.3223 31.4556 35.5506 32.1119 33.5179C33.5027 33.2332 34.8167 32.6547 35.9659 31.821C37.115 30.9874 38.0728 29.9178 38.7752 28.684C39.8458 26.8371 40.3023 24.6979 40.0789 22.5748C39.8556 20.4517 38.9639 18.4544 37.5324 16.8707Z" fill="currentColor"/>
-                        </svg>
+    <img src="myLogo.png" alt="AI" class="ai-avatar-img">
                     </div>
                     <div class="message-content">${escapeHtml(content)}</div>
                 `;
@@ -619,12 +932,12 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Send message - ✅ USING YOUR AUTHORIZATION HEADER FORMAT
+        // Send message to backend
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             
-            if (message === '' || !userToken) return;
+            if (message === '') return;
 
             // Add user message to UI
             addMessageToUI('user', message);
@@ -641,9 +954,7 @@
             typingDiv.id = 'typingIndicator';
             typingDiv.innerHTML = `
                 <div class="message-avatar">
-                    <svg viewBox="0 0 41 41" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
-                        <path d="M37.5324 16.8707C37.9808 15.5241 38.1363 14.0974 37.9886 12.6859C37.8409 11.2744 37.3934 9.91076 36.676 8.68622C35.6126 6.83404 33.9882 5.3676 32.0373 4.4985C30.0864 3.62941 27.9098 3.40259 25.8215 3.85078C24.8796 2.7893 23.7219 1.94125 22.4257 1.36341C21.1295 0.785575 19.7249 0.491269 18.3058 0.500197C16.1708 0.495044 14.0893 1.16803 12.3614 2.42214C10.6335 3.67624 9.34853 5.44666 8.6917 7.47815C7.30085 7.76286 5.98686 8.3414 4.8377 9.17505C3.68854 10.0087 2.73073 11.0782 2.02839 12.312C0.956464 14.1591 0.498905 16.2988 0.721698 18.4228C0.944492 20.5467 1.83612 22.5449 3.268 24.1293C2.81966 25.4759 2.66413 26.9026 2.81182 28.3141C2.95951 29.7256 3.40701 31.0892 4.12437 32.3138C5.18791 34.1659 6.8123 35.6322 8.76321 36.5013C10.7141 37.3704 12.8907 37.5973 14.9789 37.1492C15.9208 38.2107 17.0786 39.0587 18.3747 39.6366C19.6709 40.2144 21.0755 40.5087 22.4946 40.4998C24.6307 40.5054 26.7133 39.8321 28.4418 38.5772C30.1704 37.3223 31.4556 35.5506 32.1119 33.5179C33.5027 33.2332 34.8167 32.6547 35.9659 31.821C37.115 30.9874 38.0728 29.9178 38.7752 28.684C39.8458 26.8371 40.3023 24.6979 40.0789 22.5748C39.8556 20.4517 38.9639 18.4544 37.5324 16.8707Z" fill="currentColor"/>
-                    </svg>
+                    <img src="myLogo.png" alt="AI" class="ai-avatar-img">
                 </div>
                 <div class="message-content">
                     <div class="typing-indicator">
@@ -656,7 +967,7 @@
             chatMessages.appendChild(typingDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            // ✅ Send to backend with Authorization header (YOUR FORMAT)
+            // Send to backend
             try {
                 const response = await fetch(`${API_URL}/chat`, {
                     method: 'POST',
@@ -725,6 +1036,196 @@
             }
         }
 
+        // --- Toggle section (Images/Projects) ---
+        function toggleSection(section) {
+            const content = document.getElementById(section + 'Content');
+            const arrow = document.getElementById(section + 'Arrow');
+            content.classList.toggle('expanded');
+            arrow.classList.toggle('expanded');
+        }
+
+        // --- Media functions (use backend) ---
+        async function handleMediaUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch(`${API_URL}/user/media`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    await displayMedia();
+                    event.target.value = ''; // Reset input
+                } else {
+                    const error = await response.json();
+                    alert('Upload failed: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed. Please try again.');
+            }
+        }
+
+        async function displayMedia() {
+            const imagesList = document.getElementById('imagesList');
+            imagesList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">Loading...</p>';
+
+            try {
+                const response = await fetch(`${API_URL}/user/media`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const media = await response.json();
+                    imagesList.innerHTML = '';
+
+                    if (media.length === 0) {
+                        imagesList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">No media uploaded yet</p>';
+                        return;
+                    }
+
+                    media.forEach((item) => {
+                        const div = document.createElement('div');
+                        div.className = 'image-item';
+                        if (item.type === 'image') {
+                            div.innerHTML = `
+                                <img src="${item.url}" alt="Image" onclick="openImageModal('${item.url}')">
+                                <button class="image-remove" onclick="removeMedia(${item.id})">✕</button>
+                            `;
+                        } else {
+                            div.innerHTML = `
+                                <video src="${item.url}" onclick="openVideoModal('${item.url}')" muted playsinline></video>
+                                <button class="image-remove" onclick="removeMedia(${item.id})">✕</button>
+                            `;
+                        }
+                        imagesList.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading media:', error);
+                imagesList.innerHTML = '<p style="color:red; font-size:12px;">Error loading media</p>';
+            }
+        }
+
+        async function removeMedia(mediaId) {
+            if (!confirm('Delete this media?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/user/media/${mediaId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    await displayMedia();
+                }
+            } catch (error) {
+                console.error('Error deleting media:', error);
+                alert('Failed to delete media');
+            }
+        }
+
+        // --- Projects functions (use backend) ---
+        async function addProject() {
+            const input = document.getElementById('projectInput');
+            const projectText = input.value.trim();
+            
+            if (projectText === '') return;
+
+            try {
+                const response = await fetch(`${API_URL}/user/projects`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${userToken}`
+                    },
+                    body: JSON.stringify({ text: projectText })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    await displayProjects();
+                } else {
+                    const error = await response.json();
+                    alert('Failed to add project: ' + (error.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error adding project:', error);
+                alert('Failed to add project. Please try again.');
+            }
+        }
+
+        async function displayProjects() {
+            const projectsList = document.getElementById('projectsList');
+            projectsList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">Loading...</p>';
+
+            try {
+                const response = await fetch(`${API_URL}/user/projects`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    const projects = await response.json();
+                    projectsList.innerHTML = '';
+
+                    if (projects.length === 0) {
+                        projectsList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">No projects added yet</p>';
+                        return;
+                    }
+
+                    projects.forEach((project) => {
+                        const div = document.createElement('div');
+                        div.className = 'project-item';
+                        div.innerHTML = `
+                            <div>${escapeHtml(project.text)}</div>
+                            <small style="color: #9ca3af; font-size: 10px;">${new Date(project.created_at).toLocaleString()}</small>
+                            <button class="project-remove" onclick="removeProject(${project.id})">✕</button>
+                        `;
+                        projectsList.appendChild(div);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                projectsList.innerHTML = '<p style="color:red; font-size:12px;">Error loading projects</p>';
+            }
+        }
+
+        async function removeProject(projectId) {
+            if (!confirm('Delete this project?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/user/projects/${projectId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${userToken}`
+                    }
+                });
+
+                if (response.ok) {
+                    await displayProjects();
+                }
+            } catch (error) {
+                console.error('Error deleting project:', error);
+                alert('Failed to delete project');
+            }
+        }
+
         // Escape HTML
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -738,6 +1239,38 @@
                 document.getElementById('messageInput').focus();
             }, 100);
         });
+
+        // Image modal handlers
+        function openImageModal(src) {
+            const overlay = document.getElementById('imageModal');
+            const img = document.getElementById('imageModalImg');
+            img.src = src;
+            overlay.classList.add('open');
+        }
+
+        function closeImageModal(e) {
+            const overlay = document.getElementById('imageModal');
+            overlay.classList.remove('open');
+            const img = document.getElementById('imageModalImg');
+            img.src = '';
+        }
+        
+        // Video modal handlers
+        function openVideoModal(src) {
+            const overlay = document.getElementById('videoModal');
+            const vid = document.getElementById('videoModalVideo');
+            vid.src = src;
+            overlay.classList.add('open');
+            vid.play().catch(() => {});
+        }
+
+        function closeVideoModal(e) {
+            const overlay = document.getElementById('videoModal');
+            const vid = document.getElementById('videoModalVideo');
+            vid.pause();
+            vid.src = '';
+            overlay.classList.remove('open');
+        }
     </script>
 </body>
 </html>

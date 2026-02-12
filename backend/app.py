@@ -2,8 +2,9 @@ import os
 import uvicorn
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import  Optional
+from typing import Optional
 
 import google.generativeai as genai
 from jose import jwt, JWTError
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 # --- DB & ROUTERS ---
 from database import Base, engine, SessionLocal
 from auth.router import router as auth_router
+from media_projects import router as media_projects_router
 from models import User, ChatMessage
 
 # -------------------------------------------------
@@ -49,9 +51,17 @@ app.add_middleware(
 )
 
 # -------------------------------------------------
+# SERVE UPLOADED FILES
+# -------------------------------------------------
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
+# -------------------------------------------------
 # ROUTERS
 # -------------------------------------------------
-app.include_router(auth_router, prefix="/auth", tags=["auth"]) 
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(media_projects_router, tags=["user"])
+ 
 
 # -------------------------------------------------
 # DEPENDENCIES

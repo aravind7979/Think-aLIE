@@ -34,7 +34,7 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     # Create access token
     access_token = create_access_token({"sub": str(user.id)})
 
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, email=user.email)
 
 @router.post("/login", response_model=TokenResponse)
 def login(req: LoginRequest, db: Session = Depends(get_db)):
@@ -49,4 +49,4 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     # Create access token
     access_token = create_access_token({"sub": str(user.id)})
 
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, email=user.email)
