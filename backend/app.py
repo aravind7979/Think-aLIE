@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 # --- DB & ROUTERS ---
 from database import Base, engine, SessionLocal
+import database
 from auth.router import router as auth_router
 from media_projects import router as media_projects_router
 from models import User, ChatMessage
@@ -37,7 +38,10 @@ app = FastAPI()
 # -------------------------------------------------
 @app.on_event("startup")
 def startup():
-    Base.metadata.create_all(bind=engine)
+    if not database.engine:
+        raise RuntimeError("❌ FATAL: DATABASE_URL is not set. Check Railway Variables or .env file")
+    Base.metadata.create_all(bind=database.engine)
+    print("✅ Database initialized")
 
 # -------------------------------------------------
 # CORS
