@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from jose import jwt
 from sqlalchemy.orm import Session
 import os
-from database import SessionLocal
+from . import database
 from models import User
 
 router = APIRouter()
@@ -24,7 +24,7 @@ class Login(BaseModel):
 
 # ---------- Database Dependency ----------
 def get_db():
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:

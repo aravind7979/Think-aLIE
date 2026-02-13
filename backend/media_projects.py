@@ -2,8 +2,8 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import User, Media, Project
+from . import database
+from .models import User, Media, Project
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -13,7 +13,7 @@ router = APIRouter()
 
 # --- Dependencies ---
 def get_db():
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:

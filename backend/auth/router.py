@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from models import User
+from .. import database
+from ..models import User
 from .schemas import SignupRequest, LoginRequest, TokenResponse
 from .security import hash_password, verify_password, create_access_token
 
 router = APIRouter()
 
 def get_db():
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:

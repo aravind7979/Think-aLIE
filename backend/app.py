@@ -11,11 +11,10 @@ from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 
 # --- DB & ROUTERS ---
-from database import Base, engine, SessionLocal
-import database
-from auth.router import router as auth_router
-from media_projects import router as media_projects_router
-from models import User, ChatMessage
+from . import database
+from .auth.router import router as auth_router
+from .media_projects import router as media_projects_router
+from .models import User, ChatMessage
 
 # -------------------------------------------------
 # GEMINI CONFIG (SAFE FOR HUGGING FACE)
@@ -38,10 +37,20 @@ app = FastAPI()
 # -------------------------------------------------
 @app.on_event("startup")
 def startup():
+    # Initialize DB engine lazily. If unreachable, log and continue so the
+    # app doesn't crash during deploy where the DB may be temporarily
+    # unreachable. Set raise_on_error=True if you want to fail fast.
+    database.init_db(raise_on_error=False)
     if not database.engine:
-        raise RuntimeError("❌ FATAL: DATABASE_URL is not set. Check Railway Variables or .env file")
-    Base.metadata.create_all(bind=database.engine)
-    print("✅ Database initialized")
+        # Database not initialized; skip create_all and allow app to start.
+        return
+
+    try:
+        database.Base.metadata.create_all(bind=database.engine)
+        print("✅ Database initialized")
+    except Exception as e:
+        # Log but don't crash the whole app on transient DB errors at startup
+        print(f"⚠️ Database initialization warning: {e}")
 
 # -------------------------------------------------
 # CORS
@@ -71,7 +80,7 @@ app.include_router(media_projects_router, tags=["user"])
 # DEPENDENCIES
 # -------------------------------------------------
 def get_db():
-    db = SessionLocal()
+    db = database.SessionLocal()
     try:
         yield db
     finally:
