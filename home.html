@@ -639,7 +639,8 @@
                 </svg>
                 New chat
             </button>
-
+<div id="chatList"></div>
+<button onclick="createNewChat()">+ New Chat</button>
             <!-- Images Section -->
             <div class="section-header" onclick="toggleSection('images')">
                 <span class="section-arrow" id="imagesArrow">▶</span>
@@ -731,546 +732,189 @@
         </div>
     </div>
 
-    <script>
-        const API_URL = "http://127.0.0.1:8000";
-        
-        let userToken = null;
-        let userEmail = null;
+<script>
+const API_URL =
+    window.location.hostname === "localhost"
+        ? "http://127.0.0.1:8000"
+        : "https://your-backend.up.railway.app";
 
-        // Check authentication on load
-        window.addEventListener('load', async () => {
-            userToken = localStorage.getItem('token');
-            userEmail = localStorage.getItem('user_email');
-            
-            // if (!userToken) {
-            //     window.location.href = 'signup.html';
-            //     return;
-            // }
-            
-            // Set user info
-            if (userEmail) {
-                const userName = document.getElementById('userName');
-                const userAvatar = document.getElementById('userAvatar');
-                userName.textContent = userEmail.split('@')[0];
-                userAvatar.textContent = userEmail[0].toUpperCase();
-            }
-            
-            // Migrate localStorage data if needed
-            await migrateLocalStorageData();
-            
-            // Load chat history
-            loadChatHistory();
+let currentChatId = null;
+let chats = [];
 
-            // Load images/videos and projects
-            displayMedia();
-            displayProjects();
-        });
+/* ================= AUTH ================= */
 
-        // --- Migration helper ---
-        async function migrateLocalStorageData() {
-            const localMedia = JSON.parse(localStorage.getItem('media') || '[]');
-            const localProjects = JSON.parse(localStorage.getItem('projects') || '[]');
-            
-            // Migrate projects
-            if (localProjects.length > 0) {
-                try {
-                    for (const proj of localProjects) {
-                        await fetch(`${API_URL}/user/projects`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${userToken}`
-                            },
-                            body: JSON.stringify(proj)
-                        });
-                    }
-                    console.log(`✅ Migrated ${localProjects.length} projects`);
-                    localStorage.removeItem('projects');
-                } catch (error) {
-                    console.error('❌ Project migration failed:', error);
-                }
-            }
-            
-            // Migrate media (convert DataURLs to files and upload)
-            if (localMedia.length > 0) {
-                try {
-                    for (const item of localMedia) {
-                        const blob = dataURLtoBlob(item.src);
-                        const file = new File([blob], `migrated_${Date.now()}.jpg`, { type: 'image/jpeg' });
-                        const formData = new FormData();
-                        formData.append('file', file);
-                        
-                        await fetch(`${API_URL}/user/media`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${userToken}`
-                            },
-                            body: formData
-                        });
-                    }
-                    console.log(`✅ Migrated ${localMedia.length} media items`);
-                    localStorage.removeItem('media');
-                } catch (error) {
-                    console.error('❌ Media migration failed:', error);
-                }
-            }
+function getToken() {
+    return localStorage.getItem("access_token");
+}
+
+function logout() {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user_email");
+    window.location.href = "login.html";
+}
+
+/* ================= INITIAL LOAD ================= */
+
+window.addEventListener("load", async () => {
+    const token = getToken();
+    if (!token) {
+        window.location.href = "login.html";
+        return;
+    }
+
+    await loadChats();
+});
+
+/* ================= CHAT LIST ================= */
+
+async function loadChats() {
+    const res = await fetch(`${API_URL}/chats`, {
+        headers: {
+            Authorization: `Bearer ${getToken()}`
+        }
+    });
+
+    if (!res.ok) return logout();
+
+    const data = await res.json();
+    chats = data.chats || [];
+
+    renderChatList();
+
+    if (chats.length > 0) {
+        selectChat(chats[0].id);
+    } else {
+        await createNewChat();
+    }
+}
+
+function renderChatList() {
+    const sidebar = document.getElementById("chatList");
+    sidebar.innerHTML = "";
+
+    chats.forEach(chat => {
+        const btn = document.createElement("div");
+        btn.className = "chat-item";
+        btn.textContent = chat.title || "Untitled Chat";
+        btn.onclick = () => selectChat(chat.id);
+
+        if (chat.id === currentChatId) {
+            btn.classList.add("active");
         }
 
-        // Helper to convert DataURL to Blob
-        function dataURLtoBlob(dataurl) {
-            const arr = dataurl.split(',');
-            const mime = arr[0].match(/:(.*?);/)[1];
-            const bstr = atob(arr[1]);
-            let n = bstr.length;
-            const u8arr = new Uint8Array(n);
-            while(n--) {
-                u8arr[n] = bstr.charCodeAt(n);
-            }
-            return new Blob([u8arr], {type:mime});
+        sidebar.appendChild(btn);
+    });
+}
+
+/* ================= SELECT CHAT ================= */
+
+async function selectChat(chatId) {
+    currentChatId = chatId;
+    renderChatList();
+    await loadMessages(chatId);
+}
+
+async function loadMessages(chatId) {
+    const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
+        headers: {
+            Authorization: `Bearer ${getToken()}`
         }
+    });
 
-        // Logout function
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user_email');
-            window.location.href = 'login.html';
+    if (!res.ok) return logout();
+
+    const data = await res.json();
+    const chatMessages = document.getElementById("chatMessages");
+
+    chatMessages.classList.remove("empty");
+    chatMessages.innerHTML = "";
+
+    data.messages.forEach(msg => {
+        addMessageToUI(msg.role, msg.content);
+    });
+}
+
+/* ================= SEND MESSAGE ================= */
+
+async function sendMessage() {
+    const input = document.getElementById("messageInput");
+    const message = input.value.trim();
+    if (!message) return;
+    if (!currentChatId) return alert("Create or select a chat first.");
+
+    addMessageToUI("user", message);
+    input.value = "";
+
+    const res = await fetch(`${API_URL}/chats/${currentChatId}/message`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${getToken()}`
+        },
+        body: JSON.stringify({ message })
+    });
+
+    if (!res.ok) return logout();
+
+    const data = await res.json();
+    addMessageToUI("assistant", data.reply);
+}
+
+/* ================= CREATE NEW CHAT ================= */
+
+async function createNewChat() {
+    const res = await fetch(`${API_URL}/chats`, {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${getToken()}`
         }
+    });
 
-        // Auto-resize textarea
-        function autoResize(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
-        }
+    if (!res.ok) return logout();
 
-        // Update send button state
-        function updateSendButton() {
-            const input = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendButton');
-            const hasText = input.value.trim().length > 0;
-            
-            sendBtn.disabled = !hasText;
-            if (hasText) {
-                sendBtn.classList.add('active');
-            } else {
-                sendBtn.classList.remove('active');
-            }
-        }
+    const data = await res.json();
 
-        // Handle Enter key
-        function handleKeyPress(event) {
-            if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                sendMessage();
-            }
-        }
+    chats.unshift(data.chat);
+    renderChatList();
+    selectChat(data.chat.id);
+}
 
-        // Handle Ctrl+Shift+O for new chat
-        document.addEventListener('keydown', (event) => {
-            if (event.ctrlKey && event.shiftKey && event.key === 'O') {
-                event.preventDefault();
-                newChat();
-            }
-        });
+/* ================= UI ================= */
 
-        // Load chat history from backend
-        async function loadChatHistory() {
-            try {
-                const response = await fetch(`${API_URL}/chat/history`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
+function addMessageToUI(role, content) {
+    const chatMessages = document.getElementById("chatMessages");
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const chatMessages = document.getElementById('chatMessages');
-                    
-                    if (data.messages && data.messages.length > 0) {
-                        chatMessages.classList.remove('empty');
-                        chatMessages.innerHTML = '';
-                        
-                        data.messages.forEach(msg => {
-                            addMessageToUI(msg.role, msg.content);
-                        });
-                    }
-                } else if (response.status === 401) {
-                    logout();
-                }
-            } catch (error) {
-                console.error('Error loading chat history:', error);
-            }
-        }
+    if (chatMessages.classList.contains("empty")) {
+        chatMessages.classList.remove("empty");
+        chatMessages.innerHTML = "";
+    }
 
-        // Add message to UI
-        function addMessageToUI(role, content) {
-            const chatMessages = document.getElementById('chatMessages');
-            
-            if (chatMessages.classList.contains('empty')) {
-                chatMessages.classList.remove('empty');
-                chatMessages.innerHTML = '';
-            }
+    const messageDiv = document.createElement("div");
+    messageDiv.className = `message ${role}`;
 
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}`;
-            
-            if (role === 'user') {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">${userEmail ? userEmail[0].toUpperCase() : 'U'}</div>
-                    <div class="message-content">${escapeHtml(content)}</div>
-                `;
-            } else {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">
-    <img src="myLogo.png" alt="AI" class="ai-avatar-img">
-                    </div>
-                    <div class="message-content">${escapeHtml(content)}</div>
-                `;
-            }
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+    messageDiv.innerHTML = `
+        <div class="message-avatar">
+            ${role === "user" ? "U" : "<img src='myLogo.png' class='ai-avatar-img'>"}
+        </div>
+        <div class="message-content">${escapeHtml(content)}</div>
+    `;
 
-        // Send message to backend
-        async function sendMessage() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-            
-            if (message === '') return;
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
 
-            // Add user message to UI
-            addMessageToUI('user', message);
+function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-            // Clear input
-            input.value = '';
-            autoResize(input);
-            updateSendButton();
-
-            // Show typing indicator
-            const chatMessages = document.getElementById('chatMessages');
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'message assistant';
-            typingDiv.id = 'typingIndicator';
-            typingDiv.innerHTML = `
-                <div class="message-avatar">
-                    <img src="myLogo.png" alt="AI" class="ai-avatar-img">
-                </div>
-                <div class="message-content">
-                    <div class="typing-indicator">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            `;
-            chatMessages.appendChild(typingDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-
-            // Send to backend
-            try {
-                const response = await fetch(`${API_URL}/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${userToken}`
-                    },
-                    body: JSON.stringify({ message: message })
-                });
-
-                // Remove typing indicator
-                const indicator = document.getElementById('typingIndicator');
-                if (indicator) {
-                    indicator.remove();
-                }
-
-                if (response.ok) {
-                    const data = await response.json();
-                    addMessageToUI('assistant', data.reply);
-                } else if (response.status === 401) {
-                    alert('Session expired. Please login again.');
-                    logout();
-                } else {
-                    const errorData = await response.json();
-                    console.error('Error:', errorData);
-                    addMessageToUI('assistant', 'Sorry, I encountered an error. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error sending message:', error);
-                const indicator = document.getElementById('typingIndicator');
-                if (indicator) {
-                    indicator.remove();
-                }
-                addMessageToUI('assistant', 'Network error. Please check your connection and try again.');
-            }
-        }
-
-        // New chat function
-        async function newChat() {
-            if (!confirm('Are you sure you want to start a new chat? This will clear your current conversation.')) {
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/chat/clear`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
-                if (response.ok) {
-                    const chatMessages = document.getElementById('chatMessages');
-                    chatMessages.classList.add('empty');
-                    chatMessages.innerHTML = `
-                        <div class="welcome-screen">
-                            <h1 class="welcome-title">Ready when you are.</h1>
-                        </div>
-                    `;
-                } else if (response.status === 401) {
-                    logout();
-                }
-            } catch (error) {
-                console.error('Error clearing chat:', error);
-                alert('Failed to clear chat. Please try again.');
-            }
-        }
-
-        // --- Toggle section (Images/Projects) ---
-        function toggleSection(section) {
-            const content = document.getElementById(section + 'Content');
-            const arrow = document.getElementById(section + 'Arrow');
-            content.classList.toggle('expanded');
-            arrow.classList.toggle('expanded');
-        }
-
-        // --- Media functions (use backend) ---
-        async function handleMediaUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch(`${API_URL}/user/media`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    },
-                    body: formData
-                });
-
-                if (response.ok) {
-                    await displayMedia();
-                    event.target.value = ''; // Reset input
-                } else {
-                    const error = await response.json();
-                    alert('Upload failed: ' + (error.detail || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Upload error:', error);
-                alert('Upload failed. Please try again.');
-            }
-        }
-
-        async function displayMedia() {
-            const imagesList = document.getElementById('imagesList');
-            imagesList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">Loading...</p>';
-
-            try {
-                const response = await fetch(`${API_URL}/user/media`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
-                if (response.ok) {
-                    const media = await response.json();
-                    imagesList.innerHTML = '';
-
-                    if (media.length === 0) {
-                        imagesList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">No media uploaded yet</p>';
-                        return;
-                    }
-
-                    media.forEach((item) => {
-                        const div = document.createElement('div');
-                        div.className = 'image-item';
-                        if (item.type === 'image') {
-                            div.innerHTML = `
-                                <img src="${item.url}" alt="Image" onclick="openImageModal('${item.url}')">
-                                <button class="image-remove" onclick="removeMedia(${item.id})">✕</button>
-                            `;
-                        } else {
-                            div.innerHTML = `
-                                <video src="${item.url}" onclick="openVideoModal('${item.url}')" muted playsinline></video>
-                                <button class="image-remove" onclick="removeMedia(${item.id})">✕</button>
-                            `;
-                        }
-                        imagesList.appendChild(div);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading media:', error);
-                imagesList.innerHTML = '<p style="color:red; font-size:12px;">Error loading media</p>';
-            }
-        }
-
-        async function removeMedia(mediaId) {
-            if (!confirm('Delete this media?')) return;
-
-            try {
-                const response = await fetch(`${API_URL}/user/media/${mediaId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
-                if (response.ok) {
-                    await displayMedia();
-                }
-            } catch (error) {
-                console.error('Error deleting media:', error);
-                alert('Failed to delete media');
-            }
-        }
-
-        // --- Projects functions (use backend) ---
-        async function addProject() {
-            const input = document.getElementById('projectInput');
-            const projectText = input.value.trim();
-            
-            if (projectText === '') return;
-
-            try {
-                const response = await fetch(`${API_URL}/user/projects`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${userToken}`
-                    },
-                    body: JSON.stringify({ text: projectText })
-                });
-
-                if (response.ok) {
-                    input.value = '';
-                    await displayProjects();
-                } else {
-                    const error = await response.json();
-                    alert('Failed to add project: ' + (error.detail || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Error adding project:', error);
-                alert('Failed to add project. Please try again.');
-            }
-        }
-
-        async function displayProjects() {
-            const projectsList = document.getElementById('projectsList');
-            projectsList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">Loading...</p>';
-
-            try {
-                const response = await fetch(`${API_URL}/user/projects`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
-                if (response.ok) {
-                    const projects = await response.json();
-                    projectsList.innerHTML = '';
-
-                    if (projects.length === 0) {
-                        projectsList.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:12px;">No projects added yet</p>';
-                        return;
-                    }
-
-                    projects.forEach((project) => {
-                        const div = document.createElement('div');
-                        div.className = 'project-item';
-                        div.innerHTML = `
-                            <div>${escapeHtml(project.text)}</div>
-                            <small style="color: #9ca3af; font-size: 10px;">${new Date(project.created_at).toLocaleString()}</small>
-                            <button class="project-remove" onclick="removeProject(${project.id})">✕</button>
-                        `;
-                        projectsList.appendChild(div);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading projects:', error);
-                projectsList.innerHTML = '<p style="color:red; font-size:12px;">Error loading projects</p>';
-            }
-        }
-
-        async function removeProject(projectId) {
-            if (!confirm('Delete this project?')) return;
-
-            try {
-                const response = await fetch(`${API_URL}/user/projects/${projectId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${userToken}`
-                    }
-                });
-
-                if (response.ok) {
-                    await displayProjects();
-                }
-            } catch (error) {
-                console.error('Error deleting project:', error);
-                alert('Failed to delete project');
-            }
-        }
-
-        // Escape HTML
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Focus input on load
-        window.addEventListener('load', () => {
-            setTimeout(() => {
-                document.getElementById('messageInput').focus();
-            }, 100);
-        });
-
-        // Image modal handlers
-        function openImageModal(src) {
-            const overlay = document.getElementById('imageModal');
-            const img = document.getElementById('imageModalImg');
-            img.src = src;
-            overlay.classList.add('open');
-        }
-
-        function closeImageModal(e) {
-            const overlay = document.getElementById('imageModal');
-            overlay.classList.remove('open');
-            const img = document.getElementById('imageModalImg');
-            img.src = '';
-        }
-        
-        // Video modal handlers
-        function openVideoModal(src) {
-            const overlay = document.getElementById('videoModal');
-            const vid = document.getElementById('videoModalVideo');
-            vid.src = src;
-            overlay.classList.add('open');
-            vid.play().catch(() => {});
-        }
-
-        function closeVideoModal(e) {
-            const overlay = document.getElementById('videoModal');
-            const vid = document.getElementById('videoModalVideo');
-            vid.pause();
-            vid.src = '';
-            overlay.classList.remove('open');
-        }
-    </script>
+function handleKeyPress(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+    }
+}
+</script>
 </body>
 </html>

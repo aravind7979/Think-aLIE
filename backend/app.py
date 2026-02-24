@@ -1,84 +1,96 @@
 import os
 import uvicorn
-from fastapi import FastAPI, Depends, HTTPException, Header
+import requests
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional
-
-import google.generativeai as genai
-from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+from jose import jwt
 
-# --- DB & ROUTERS ---
+from google import genai
+
+# --- DB & MODELS ---
 from . import database
-from .auth.router import router as auth_router
+from .models import Chat, Message
 from .media_projects import router as media_projects_router
-from .models import User, ChatMessage
 
-# -------------------------------------------------
-# GEMINI CONFIG (SAFE FOR HUGGING FACE)
-# -------------------------------------------------
-api_key = os.getenv("GEMINI_API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-pro")
-else:
-    model = None  # backend must still run
+# =================================================
+# ENV CONFIG
+# =================================================
 
-# -------------------------------------------------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+if not SUPABASE_URL:
+    raise RuntimeError("SUPABASE_URL not set")
+
+JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
+
+try:
+    JWKS = requests.get(JWKS_URL).json()
+except Exception as e:
+    raise RuntimeError(f"Failed to fetch Supabase JWKS: {e}")
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+
+security = HTTPBearer()
+
+
+# =================================================
 # FASTAPI APP
-# -------------------------------------------------
+# =================================================
+
 app = FastAPI()
 
-# -------------------------------------------------
-# STARTUP EVENT (DB SAFE INIT)
-# -------------------------------------------------
+
+# =================================================
+# STARTUP
+# =================================================
+
 @app.on_event("startup")
 def startup():
-    # Initialize DB engine lazily. If unreachable, log and continue so the
-    # app doesn't crash during deploy where the DB may be temporarily
-    # unreachable. Set raise_on_error=True if you want to fail fast.
-    database.init_db(raise_on_error=False)
-    if not database.engine:
-        # Database not initialized; skip create_all and allow app to start.
-        return
+    database.init_db(raise_on_error=True)
+    print("✅ Database connected")
 
-    try:
-        database.Base.metadata.create_all(bind=database.engine)
-        print("✅ Database initialized")
-    except Exception as e:
-        # Log but don't crash the whole app on transient DB errors at startup
-        print(f"⚠️ Database initialization warning: {e}")
 
-# -------------------------------------------------
+# =================================================
 # CORS
-# -------------------------------------------------
+# =================================================
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later
+    allow_origins=[
+    "http://localhost:3000",
+    "http://127.0.0.1:5500",
+    "https://your-app.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -------------------------------------------------
-# SERVE UPLOADED FILES
-# -------------------------------------------------
+
+# =================================================
+# STATIC FILES
+# =================================================
+
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# -------------------------------------------------
-# ROUTERS
-# -------------------------------------------------
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
-app.include_router(media_projects_router, tags=["user"])
- 
 
-# -------------------------------------------------
-# DEPENDENCIES
-# -------------------------------------------------
+# =================================================
+# ROUTERS
+# =================================================
+
+app.include_router(media_projects_router, tags=["user"])
+
+
+# =================================================
+# DB DEPENDENCY
+# =================================================
+
 def get_db():
     db = database.SessionLocal()
     try:
@@ -87,83 +99,183 @@ def get_db():
         db.close()
 
 
-def get_current_user(
-    authorization: Optional[str] = Header(None),
-    db: Session = Depends(get_db),
-):
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
+# =================================================
+# SUPABASE AUTH VERIFICATION
+# =================================================
 
+def verify_supabase_token(token: str):
     try:
-        parts = authorization.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            raise HTTPException(status_code=401, detail="Invalid authorization header")
-
-        token = parts[1]
-        SECRET = os.getenv("JWT_SECRET", "change-this-secret")
-        payload = jwt.decode(token, SECRET, algorithms=["HS256"])
-
-        user_id = int(payload.get("sub"))
-        user = db.query(User).filter(User.id == user_id).first()
-
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        return user
-
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+        payload = jwt.decode(
+            token,
+            JWKS,
+            algorithms=["RS256"],
+            audience="authenticated",
+        )
+        return payload
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-# -------------------------------------------------
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    token = credentials.credentials
+    payload = verify_supabase_token(token)
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    return user_id  # Supabase UUID
+
+
+# =================================================
 # SCHEMAS
-# -------------------------------------------------
+# =================================================
+
 class ChatRequest(BaseModel):
     message: str
 
 
-# -------------------------------------------------
+# =================================================
 # ROOT
-# -------------------------------------------------
+# =================================================
+
 @app.get("/")
 def root():
     return {
         "status": "Think-LIE backend is live",
-        "version": "1.0.0",
+        "version": "3.0.0",
     }
 
 
-# -------------------------------------------------
-# CHAT ENDPOINT
-# -------------------------------------------------
-@app.post("/chat")
-def chat(
+# =================================================
+# 1️⃣ CREATE CHAT
+# =================================================
+
+@app.post("/chats")
+def create_chat(
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    new_chat = Chat(user_id=user_id, title="New Chat")
+    db.add(new_chat)
+    db.commit()
+    db.refresh(new_chat)
+
+    return {"chat_id": str(new_chat.id)}
+
+
+# =================================================
+# 2️⃣ LIST USER CHATS
+# =================================================
+
+@app.get("/chats")
+def list_chats(
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    chats = (
+        db.query(Chat)
+        .filter(Chat.user_id == user_id)
+        .order_by(Chat.created_at.desc())
+        .all()
+    )
+
+    return [
+        {
+            "id": str(chat.id),
+            "title": chat.title,
+            "created_at": chat.created_at,
+        }
+        for chat in chats
+    ]
+
+
+# =================================================
+# 3️⃣ GET MESSAGES OF A CHAT
+# =================================================
+
+@app.get("/chats/{chat_id}/messages")
+def get_messages(
+    chat_id: str,
+    user_id: str = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    messages = (
+        db.query(Message)
+        .filter(
+            Message.chat_id == chat_id,
+            Message.user_id == user_id
+        )
+        .order_by(Message.created_at)
+        .all()
+    )
+
+    return [
+        {
+            "id": str(m.id),
+            "role": m.role,
+            "content": m.content,
+            "created_at": m.created_at,
+        }
+        for m in messages
+    ]
+
+
+# =================================================
+# 4️⃣ SEND MESSAGE (ChatGPT-style)
+# =================================================
+
+@app.post("/chats/{chat_id}/message")
+def send_message(
+    chat_id: str,
     request: ChatRequest,
-    user: User = Depends(get_current_user),
+    user_id: str = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     # Save user message
-    user_msg = ChatMessage(
-        user_id=user.id,
+    user_msg = Message(
+        chat_id=chat_id,
+        user_id=user_id,
         role="user",
         content=request.message,
     )
     db.add(user_msg)
     db.commit()
 
+    # Get full chat history for context
+    history = (
+        db.query(Message)
+        .filter(
+            Message.chat_id == chat_id,
+            Message.user_id == user_id
+        )
+        .order_by(Message.created_at)
+        .all()
+    )
+
+    context = "\n".join(
+        [f"{m.role}: {m.content}" for m in history]
+    )
+
     # Generate AI response
-    if not model:
-        ai_response = "[Think-LIE] Gemini API key not configured."
+    if not client:
+        ai_response = "Gemini API not configured."
     else:
         try:
-            response = model.generate_content(request.message)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=context,
+            )
             ai_response = response.text
         except Exception as e:
-            ai_response = f"[Think-LIE Error] {str(e)}"
+            ai_response = f"[Gemini Error] {str(e)}"
 
-    # Save assistant message
-    assistant_msg = ChatMessage(
-        user_id=user.id,
+    # Save assistant response
+    assistant_msg = Message(
+        chat_id=chat_id,
+        user_id=user_id,
         role="assistant",
         content=ai_response,
     )
@@ -173,50 +285,10 @@ def chat(
     return {"reply": ai_response}
 
 
-# -------------------------------------------------
-# CHAT HISTORY
-# -------------------------------------------------
-@app.get("/chat/history")
-def get_chat_history(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    messages = (
-        db.query(ChatMessage)
-        .filter(ChatMessage.user_id == user.id)
-        .order_by(ChatMessage.created_at)
-        .all()
-    )
+# =================================================
+# ENTRYPOINT
+# =================================================
 
-    return {
-        "messages": [
-            {
-                "id": m.id,
-                "role": m.role,
-                "content": m.content,
-                "created_at": m.created_at.isoformat(),
-            }
-            for m in messages
-        ]
-    }
-
-
-# -------------------------------------------------
-# CLEAR CHAT
-# -------------------------------------------------
-@app.delete("/chat/clear")
-def clear_chat_history(
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    db.query(ChatMessage).filter(ChatMessage.user_id == user.id).delete()
-    db.commit()
-    return {"message": "Chat history cleared successfully"}
-
-
-# -------------------------------------------------
-# HUGGING FACE ENTRYPOINT
-# -------------------------------------------------
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 7860))
     uvicorn.run(app, host="0.0.0.0", port=port)

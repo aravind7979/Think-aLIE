@@ -206,73 +206,52 @@
         </div>
     </div>
 
-    <script>
-        // Change this to your backend URL
-        const API_URL = "http://127.0.0.1:8000";
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    const SUPABASE_URL = "https://nxpaxiqqvajgqvgmyrpx.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_mjfPnzZVtvZFhKNQy6sTyQ_LJTpgkq0";
 
-        function showError(message) {
-            const errorDiv = document.getElementById("errorMessage");
-            errorDiv.textContent = message;
-            errorDiv.style.display = "block";
-            document.getElementById("successMessage").style.display = "none";
+    const { createClient } = supabase;
+    const supabaseClient = createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY
+    );
+
+    function showError(message) {
+        const errorDiv = document.getElementById("errorMessage");
+        errorDiv.textContent = message;
+        errorDiv.style.display = "block";
+        document.getElementById("successMessage").style.display = "none";
+    }
+
+    function showSuccess(message) {
+        const successDiv = document.getElementById("successMessage");
+        successDiv.textContent = message;
+        successDiv.style.display = "block";
+        document.getElementById("errorMessage").style.display = "none";
+    }
+
+    async function signup(event) {
+        event.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+
+        console.log("Signup clicked");
+
+        const { data, error } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password
+        });
+
+        console.log(data, error);
+
+        if (error) {
+            showError(error.message);
+        } else {
+            showSuccess("Account created successfully!");
         }
-
-        function showSuccess(message) {
-            const successDiv = document.getElementById("successMessage");
-            successDiv.textContent = message;
-            successDiv.style.display = "block";
-            document.getElementById("errorMessage").style.display = "none";
-        }
-
-        async function signup(event) {
-            event.preventDefault();
-
-            const email = document.getElementById("email").value.trim();
-            const password = document.getElementById("password").value;
-            const signupBtn = document.getElementById("signupBtn");
-
-            if (!email || !password) {
-                showError("Please fill in all fields");
-                return;
-            }
-
-            if (password.length < 6) {
-                showError("Password must be at least 6 characters");
-                return;
-            }
-
-            // Disable button and show loading
-            signupBtn.disabled = true;
-            signupBtn.textContent = "Creating account...";
-
-            try {
-                const response = await fetch(`${API_URL}/auth/signup`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    showSuccess("Account created successfully! Redirecting to login...");
-                    setTimeout(() => {
-                        window.location.href = "login.html";
-                    }, 1500);
-                } else {
-                    showError(data.detail || "Signup failed. Please try again.");
-                    signupBtn.disabled = false;
-                    signupBtn.textContent = "Sign Up";
-                }
-            } catch (error) {
-                console.error("Signup error:", error);
-                showError("Network error. Please check your connection and try again.");
-                signupBtn.disabled = false;
-                signupBtn.textContent = "Sign Up";
-            }
-        }
-    </script>
+    }
+</script>
 </body>
 </html>

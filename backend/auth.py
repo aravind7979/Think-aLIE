@@ -1,80 +1,63 @@
-from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel, EmailStr
-from passlib.context import CryptContext
-from jose import jwt
-from sqlalchemy.orm import Session
 import os
-from . import database
-from models import User
+import requests
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt
+from jose.exceptions import JWTError
 
-router = APIRouter()
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# -----------------------------
+# Supabase Config
+# -----------------------------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
 
-SECRET = os.getenv("JWT_SECRET", "your-secret-key-change-this")
-ALGO = "HS256"
+if not SUPABASE_URL:
+    raise RuntimeError("SUPABASE_URL environment variable not set")
 
-# ---------- Schemas ----------
-class Signup(BaseModel):
-    email: EmailStr
-    password: str
+JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
 
-class Login(BaseModel):
-    email: EmailStr
-    password: str
+# Fetch JWKS once at startup
+jwks_response = requests.get(JWKS_URL)
+if jwks_response.status_code != 200:
+    raise RuntimeError("Failed to fetch Supabase JWKS")
 
-# ---------- Database Dependency ----------
-def get_db():
-    db = database.SessionLocal()
+JWKS = jwks_response.json()
+
+# -----------------------------
+# Verify Supabase JWT
+# -----------------------------
+def verify_supabase_token(token: str):
     try:
-        yield db
-    finally:
-        db.close()
+        payload = jwt.decode(
+            token,
+            JWKS,
+            algorithms=["RS256"],
+            audience="authenticated",  # Supabase audience
+        )
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
 
-# ---------- Utils ----------
-def hash_pw(pw):
-    return pwd.hash(pw)
+# -----------------------------
+# FastAPI Dependency
+# -----------------------------
+security = HTTPBearer()
 
-def verify_pw(pw, h):
-    return pwd.verify(pw, h)
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    token = credentials.credentials
 
-def create_token(user_id):
-    return jwt.encode({"sub": str(user_id)}, SECRET, algorithm=ALGO)
+    payload = verify_supabase_token(token)
 
-# ---------- Routes ----------
-@router.post("/signup")
-def signup(data: Signup, db: Session = Depends(get_db)):
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == data.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
-    
-    # Create new user
-    new_user = User(
-        email=data.email,
-        password_hash=hash_pw(data.password)
-    )
-    
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    return {"access_token": create_token(new_user.id), "user_id": new_user.id}
+    user_id = payload.get("sub")  # Supabase user UUID
 
-@router.post("/login")
-def login(data: Login, db: Session = Depends(get_db)):
-    # Get user from database
-    user = db.query(User).filter(User.email == data.email).first()
-    
-    if not user or not verify_pw(data.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    return {"access_token": create_token(user.id), "user_id": user.id}
+    if not user_id:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid token payload"
+        )
 
-@router.get("/verify")
-def verify_token(token: str):
-    """Verify if a token is valid"""
-    try:
-        payload = jwt.decode(token, SECRET, algorithms=[ALGO])
-        return {"valid": True, "user_id": payload.get("sub")}
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    return user_id

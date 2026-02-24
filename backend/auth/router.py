@@ -1,9 +1,14 @@
+import os
+import requests
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from .. import database
-from ..models import User
 from .schemas import SignupRequest, LoginRequest, TokenResponse
 from .security import hash_password, verify_password, create_access_token
+
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 router = APIRouter()
 
@@ -37,16 +42,26 @@ def signup(req: SignupRequest, db: Session = Depends(get_db)):
     return TokenResponse(access_token=access_token, email=user.email)
 
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_db)):
-    """Login existing user"""
-    # Find user
-    user = db.query(User).filter(User.email == req.email).first()
-    
-    # Verify password
-    if not user or not verify_password(req.password, user.password_hash):
+def login(req: LoginRequest):
+    response = requests.post(
+        f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+        headers={
+            "apikey": SUPABASE_ANON_KEY,
+            "Content-Type": "application/json"
+        },
+        json={
+            "email": req.email,
+            "password": req.password
+        }
+    )
+
+    if response.status_code != 200:
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    # Create access token
-    access_token = create_access_token({"sub": str(user.id)})
+    data = response.json()
 
-    return TokenResponse(access_token=access_token, email=user.email)
+    return {
+        "access_token": data["access_token"],
+        "token_type": "bearer",
+        "email": req.email
+    }
