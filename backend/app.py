@@ -1,6 +1,7 @@
 import os
 import uvicorn
 import requests
+import google.generativeai as genai
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,7 +10,6 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from jose import jwt
 
-from google import genai
 
 # --- DB & MODELS ---
 from . import database
