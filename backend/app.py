@@ -12,7 +12,7 @@ from jose import jwt
 
 
 # --- DB & MODELS ---
-from . import database
+from database
 from .models import Chat, Message
 from .media_projects import router as media_projects_router
 
