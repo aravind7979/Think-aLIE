@@ -1,4 +1,3 @@
-cat > /home/claude/frontend/login.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -218,30 +217,35 @@ cat > /home/claude/frontend/login.html << 'HTMLEOF'
         SUPABASE_ANON_KEY
     );
                
-    async function login(event) {
-        event.preventDefault();
+async function login(event) {
+    event.preventDefault();
 
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-        const { data, error } =
-            await supabaseClient.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
+    try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
 
         if (error) {
+            console.error("Login error:", error);
             alert(error.message);
-        } else {
-            // Store access token
-            localStorage.setItem("access_token", data.session.access_token);
-            localStorage.setItem("user_email", email);
-            
-            // Redirect to home page
+            return;
+        }
+
+        console.log("Login success:", data);
+
+        if (data?.user) {
             window.location.href = "home.html";
         }
+
+    } catch (err) {
+        console.error("Unexpected failure:", err);
+        alert("Something went wrong.");
     }
+}
 </script>
 </body>
 </html>
-HTMLEOF
