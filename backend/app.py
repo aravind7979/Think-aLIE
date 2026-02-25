@@ -1,6 +1,7 @@
 import os
 import requests
 from google import genai
+from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -9,6 +10,8 @@ from jose import jwt
 from supabase import create_client, Client
 from auth.router import router as auth_router
 
+# Load environment variables from .env file
+load_dotenv()
 
 # =================================================
 # ENV CONFIG
