@@ -736,7 +736,7 @@
 const API_URL =
     window.location.hostname === "localhost"
         ? "http://127.0.0.1:8000"
-        : "think-alie-production.up.railway.app";
+        : "https://think-alie-production.up.railway.app";
 
 let currentChatId = null;
 let chats = [];
@@ -829,7 +829,7 @@ async function loadMessages(chatId) {
     chatMessages.classList.remove("empty");
     chatMessages.innerHTML = "";
 
-    data.messages.forEach(msg => {
+    data.forEach(msg => {
         addMessageToUI(msg.role, msg.content);
     });
 }
