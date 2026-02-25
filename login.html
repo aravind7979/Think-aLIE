@@ -234,10 +234,11 @@ cat > /home/claude/frontend/login.html << 'HTMLEOF'
             alert(error.message);
         } else {
             // Store access token
-            localStorage.setItem("token", data.session.access_token);
+            localStorage.setItem("access_token", data.session.access_token);
             localStorage.setItem("user_email", email);
-
             
+            // Redirect to home page
+            window.location.href = "home.html";
         }
     }
 </script>

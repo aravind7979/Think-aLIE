@@ -249,7 +249,11 @@
         if (error) {
             showError(error.message);
         } else {
-            showSuccess("Account created successfully!");
+            showSuccess("Account created successfully! Please check your email to confirm your account, then log in.");
+            // Redirect to login after a delay
+            setTimeout(() => {
+                window.location.href = "login.html";
+            }, 3000);
         }
     }
 </script>

@@ -1,20 +1,13 @@
 import os
-import uvicorn
 import requests
 import google.generativeai as genai
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
 from jose import jwt
-
-
-# --- DB & MODELS ---
-from database
-from .models import Chat, Message
-from .media_projects import router as media_projects_router
+from supabase import create_client, Client
+from auth.router import router as auth_router
 
 
 # =================================================
@@ -22,8 +15,17 @@ from .media_projects import router as media_projects_router
 # =================================================
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-if not SUPABASE_URL:
-    raise RuntimeError("SUPABASE_URL not set")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+    raise RuntimeError("Supabase environment variables not set")
+
+supabase: Client = create_client(
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+)
 
 JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
 
@@ -32,8 +34,11 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to fetch Supabase JWKS: {e}")
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+    client = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    client = None
 
 security = HTTPBearer()
 
@@ -44,63 +49,24 @@ security = HTTPBearer()
 
 app = FastAPI()
 
-
-# =================================================
-# STARTUP
-# =================================================
-
-@app.on_event("startup")
-def startup():
-    database.init_db(raise_on_error=True)
-    print("✅ Database connected")
-
-
-# =================================================
-# CORS
-# =================================================
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:3000",
-    "http://127.0.0.1:5500",
-    "https://your-app.vercel.app"
+        "http://localhost:3000",
+        "http://127.0.0.1:5500",
+        "https://your-app.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
-# =================================================
-# STATIC FILES
-# =================================================
-
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Include auth router
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 
 # =================================================
-# ROUTERS
-# =================================================
-
-app.include_router(media_projects_router, tags=["user"])
-
-
-# =================================================
-# DB DEPENDENCY
-# =================================================
-
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# =================================================
-# SUPABASE AUTH VERIFICATION
+# AUTH
 # =================================================
 
 def verify_supabase_token(token: str):
@@ -126,7 +92,7 @@ def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    return user_id  # Supabase UUID
+    return user_id
 
 
 # =================================================
@@ -144,8 +110,8 @@ class ChatRequest(BaseModel):
 @app.get("/")
 def root():
     return {
-        "status": "Think-LIE backend is live",
-        "version": "3.0.0",
+        "status": "Backend live (Supabase edition)",
+        "version": "4.0.0",
     }
 
 
@@ -154,16 +120,19 @@ def root():
 # =================================================
 
 @app.post("/chats")
-def create_chat(
-    user_id: str = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    new_chat = Chat(user_id=user_id, title="New Chat")
-    db.add(new_chat)
-    db.commit()
-    db.refresh(new_chat)
+def create_chat(user_id: str = Depends(get_current_user)):
 
-    return {"chat_id": str(new_chat.id)}
+    data = {
+        "user_id": user_id,
+        "title": "New Chat",
+    }
+
+    response = supabase.table("chats").insert(data).execute()
+
+    if not response.data:
+        raise HTTPException(status_code=400, detail="Failed to create chat")
+
+    return {"chat_id": response.data[0]["id"]}
 
 
 # =================================================
@@ -171,60 +140,40 @@ def create_chat(
 # =================================================
 
 @app.get("/chats")
-def list_chats(
-    user_id: str = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    chats = (
-        db.query(Chat)
-        .filter(Chat.user_id == user_id)
-        .order_by(Chat.created_at.desc())
-        .all()
+def list_chats(user_id: str = Depends(get_current_user)):
+
+    response = (
+        supabase.table("chats")
+        .select("*")
+        .eq("user_id", user_id)
+        .order("created_at", desc=True)
+        .execute()
     )
 
-    return [
-        {
-            "id": str(chat.id),
-            "title": chat.title,
-            "created_at": chat.created_at,
-        }
-        for chat in chats
-    ]
+    return response.data
 
 
 # =================================================
-# 3️⃣ GET MESSAGES OF A CHAT
+# 3️⃣ GET MESSAGES
 # =================================================
 
 @app.get("/chats/{chat_id}/messages")
-def get_messages(
-    chat_id: str,
-    user_id: str = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    messages = (
-        db.query(Message)
-        .filter(
-            Message.chat_id == chat_id,
-            Message.user_id == user_id
-        )
-        .order_by(Message.created_at)
-        .all()
+def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
+
+    response = (
+        supabase.table("messages")
+        .select("*")
+        .eq("chat_id", chat_id)
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
     )
 
-    return [
-        {
-            "id": str(m.id),
-            "role": m.role,
-            "content": m.content,
-            "created_at": m.created_at,
-        }
-        for m in messages
-    ]
+    return response.data
 
 
 # =================================================
-# 4️⃣ SEND MESSAGE (ChatGPT-style)
+# 4️⃣ SEND MESSAGE
 # =================================================
 
 @app.post("/chats/{chat_id}/message")
@@ -232,31 +181,30 @@ def send_message(
     chat_id: str,
     request: ChatRequest,
     user_id: str = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
-    # Save user message
-    user_msg = Message(
-        chat_id=chat_id,
-        user_id=user_id,
-        role="user",
-        content=request.message,
-    )
-    db.add(user_msg)
-    db.commit()
 
-    # Get full chat history for context
-    history = (
-        db.query(Message)
-        .filter(
-            Message.chat_id == chat_id,
-            Message.user_id == user_id
-        )
-        .order_by(Message.created_at)
-        .all()
+    # Save user message
+    supabase.table("messages").insert({
+        "chat_id": chat_id,
+        "user_id": user_id,
+        "role": "user",
+        "content": request.message,
+    }).execute()
+
+    # Fetch full chat history
+    history_response = (
+        supabase.table("messages")
+        .select("*")
+        .eq("chat_id", chat_id)
+        .eq("user_id", user_id)
+        .order("created_at")
+        .execute()
     )
+
+    history = history_response.data
 
     context = "\n".join(
-        [f"{m.role}: {m.content}" for m in history]
+        [f"{m['role']}: {m['content']}" for m in history]
     )
 
     # Generate AI response
@@ -264,31 +212,17 @@ def send_message(
         ai_response = "Gemini API not configured."
     else:
         try:
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=context,
-            )
+            response = client.generate_content(context)
             ai_response = response.text
         except Exception as e:
             ai_response = f"[Gemini Error] {str(e)}"
 
-    # Save assistant response
-    assistant_msg = Message(
-        chat_id=chat_id,
-        user_id=user_id,
-        role="assistant",
-        content=ai_response,
-    )
-    db.add(assistant_msg)
-    db.commit()
+    # Save assistant message
+    supabase.table("messages").insert({
+        "chat_id": chat_id,
+        "user_id": user_id,
+        "role": "assistant",
+        "content": ai_response,
+    }).execute()
 
     return {"reply": ai_response}
-
-
-# =================================================
-# ENTRYPOINT
-# =================================================
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 7860))
-    uvicorn.run(app, host="0.0.0.0", port=port)
