@@ -1,25 +1,20 @@
 import os
 import requests
-import google.generativeai as genai
-from dotenv import load_dotenv
+from google import genai
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from jose import jwt
 from supabase import create_client, Client
-from auth.router import router as auth_router
 
-# Load environment variables from .env file
-load_dotenv()
-
+load_dotenv = lambda: None  # No-op since we're not using .env in this version 
 # =================================================
 # ENV CONFIG
 # =================================================
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
@@ -37,12 +32,7 @@ try:
 except Exception as e:
     raise RuntimeError(f"Failed to fetch Supabase JWKS: {e}")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    client = genai.GenerativeModel('gemini-1.5-flash')
-else:
-    client = None
-
+client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 security = HTTPBearer()
 
 
@@ -63,9 +53,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Include auth router
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 
 # =================================================
@@ -135,7 +122,7 @@ def create_chat(user_id: str = Depends(get_current_user)):
     if not response.data:
         raise HTTPException(status_code=400, detail="Failed to create chat")
 
-    return {"chat_id": response.data[0]["id"]}
+    return {"chat": response.data[0]}
 
 
 # =================================================
@@ -153,7 +140,7 @@ def list_chats(user_id: str = Depends(get_current_user)):
         .execute()
     )
 
-    return response.data
+    return {"chats": response.data}
 
 
 # =================================================
@@ -215,7 +202,10 @@ def send_message(
         ai_response = "Gemini API not configured."
     else:
         try:
-            response = client.generate_content(context)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=context,
+            )
             ai_response = response.text
         except Exception as e:
             ai_response = f"[Gemini Error] {str(e)}"
