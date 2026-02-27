@@ -622,116 +622,138 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src = "myLogo.png" alt="Logo" class = "logo-img">
-                    <span>Think-LIE</span>
-                </div>
-            </div>
+<div class="container">
 
-            <button class="new-chat-btn" onclick="newChat()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path>
-                    <path d="m15 5 4 4"></path>
-                </svg>
-                New chat
-            </button>
+<!-- ================= SIDEBAR ================= -->
+
+<div class="sidebar">
+<div class="sidebar-header">
+<div class="logo">
+<img src="myLogo.png" alt="Logo" class="logo-img">
+<span>Think-LIE</span>
+</div>
+</div>
+
+<button class="new-chat-btn">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path>
+<path d="m15 5 4 4"></path>
+</svg>
+New chat
+</button>
+
 <div id="chatList"></div>
-<button onclick="createNewChat()">+ New Chat</button>
-            <!-- Images Section -->
-            <div class="section-header" onclick="toggleSection('images')">
-                <span class="section-arrow" id="imagesArrow">▶</span>
-                <span>Images</span>
-            </div>
-            <div class="section-content" id="imagesContent">
-                <input type="file" id="mediaInput" accept="image/*,video/*" style="display:none;" onchange="handleMediaUpload(event)">
-                <button class="upload-btn" onclick="document.getElementById('mediaInput').click()">+ Add Image/Video</button>
-                <div id="imagesList"></div>
-            </div>
 
-            <!-- Projects Section -->
-            <div class="section-header" onclick="toggleSection('projects')">
-                <span class="section-arrow" id="projectsArrow">▶</span>
-                <span>Projects</span>
-            </div>
-            <div class="section-content" id="projectsContent">
-                <textarea class="add-project-input" id="projectInput" placeholder="Add project link or note..." rows="2"></textarea>
-                <button class="add-project-btn" onclick="addProject()">Add Project</button>
-                <div id="projectsList"></div>
-            </div>
+<!-- Images Section -->
+<div class="section-header">
+<span class="section-arrow" id="imagesArrow">▶</span>
+<span>Images</span>
+</div>
 
-            <div class="sidebar-section">
-                <div class="chat-item active">Ready when you are.</div>
-            </div>
+<div class="section-content" id="imagesContent">
+<input type="file" id="mediaInput" accept="image/*,video/*" style="display:none;">
+<button class="upload-btn">+ Add Image/Video</button>
+<div id="imagesList"></div>
+</div>
 
-            <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar" id="userAvatar">U</div>
-                    <div class="user-info">
-                        <div class="user-name" id="userName">User</div>
-                    </div>
-                </div>
-                <button class="logout-btn" onclick="logout()">Logout</button>
-            </div>
-        </div>
+<!-- Projects Section -->
+<div class="section-header">
+<span class="section-arrow" id="projectsArrow">▶</span>
+<span>Projects</span>
+</div>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="chat-header">
-                <button class="model-selector">
-                    Think-LIE AI
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </button>
-            </div>
+<div class="section-content" id="projectsContent">
+<textarea class="add-project-input" id="projectInput" placeholder="Add project link or note..." rows="2"></textarea>
+<button class="add-project-btn">Add Project</button>
+<div id="projectsList"></div>
+</div>
 
-            <div class="chat-messages empty" id="chatMessages">
-                <div class="welcome-screen">
-                    <h1 class="welcome-title">Ready when you are.</h1>
-                </div>
-            </div>
+<div class="sidebar-section">
+<div class="chat-item active">Ready when you are.</div>
+</div>
 
-            <div class="input-area">
-                <div class="input-container">
-                    <div class="input-wrapper">
-                        <div class="input-main">
-                            <textarea 
-                                id="messageInput" 
-                                placeholder="Ask anything" 
-                                rows="1"
-                                onkeydown="handleKeyPress(event)"
-                                oninput="autoResize(this); updateSendButton()"
-                            ></textarea>
-                            <button id="sendButton" onclick="sendMessage()" disabled>
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="sidebar-footer">
+<div class="user-profile">
+<div class="user-avatar" id="userAvatar">U</div>
+<div class="user-info">
+<div class="user-name" id="userName">User</div>
+</div>
+</div>
+<button class="logout-btn">Logout</button>
+</div>
 
-    <div class="image-modal-overlay" id="imageModal" onclick="closeImageModal(event)">
-        <div class="image-modal" onclick="event.stopPropagation()">
-            <button class="image-modal-close" onclick="closeImageModal()">✕</button>
-            <img id="imageModalImg" src="" alt="Full Image">
-        </div>
-    </div>
-    <div class="image-modal-overlay" id="videoModal" onclick="closeVideoModal(event)">
-        <div class="image-modal" onclick="event.stopPropagation()">
-            <button class="image-modal-close" onclick="closeVideoModal()">✕</button>
-            <video id="videoModalVideo" src="" controls style="max-width:100%; max-height:100%; border-radius:8px;"></video>
-        </div>
-    </div>
+</div>
 
+<!-- ================= MAIN ================= -->
+
+<div class="main-content">
+
+<div class="chat-header">
+<button class="model-selector">
+Think-LIE AI
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<polyline points="6 9 12 15 18 9"></polyline>
+</svg>
+</button>
+</div>
+
+<div class="chat-messages empty" id="chatMessages">
+<div class="welcome-screen">
+<h1 class="welcome-title">Ready when you are.</h1>
+</div>
+</div>
+
+<div class="input-area">
+<div class="input-container">
+<div class="input-wrapper">
+<div class="input-main">
+
+<textarea 
+id="messageInput" 
+placeholder="Ask anything" 
+rows="1">
+</textarea>
+
+<button id="sendButton" disabled>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<line x1="22" y1="2" x2="11" y2="13"></line>
+<polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+</svg>
+</button>
+
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<div class="image-modal-overlay" id="imageModal">
+<div class="image-modal">
+<button class="image-modal-close">✕</button>
+<img id="imageModalImg" src="" alt="Full Image">
+</div>
+</div>
+
+<div class="image-modal-overlay" id="videoModal">
+<div class="image-modal">
+<button class="image-modal-close">✕</button>
+<video id="videoModalVideo" src="" controls style="max-width:100%; max-height:100%; border-radius:8px;"></video>
+</div>
+</div>
+
+        <!-- Load Supabase library FIRST -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <!-- Initialize Supabase -->
+    <script>
+        const supabaseClient = supabase.createClient(
+            "YOUR_SUPABASE_URL",
+            "YOUR_SUPABASE_ANON_KEY"
+        );
+    </script>
 <script>
 const API_URL =
     window.location.hostname === "localhost"
@@ -741,22 +763,130 @@ const API_URL =
 let currentChatId = null;
 let chats = [];
 
-/* ================= AUTH ================= */
-
-function getToken() {
-    return localStorage.getItem("access_token");
+function newChat() {
+    createNewChat();
 }
 
-function logout() {
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("user_email");
+function toggleSection(section) {
+    const content = document.getElementById(section + "Content");
+    const arrow = document.getElementById(section + "Arrow");
+
+    content.classList.toggle("expanded");
+    arrow.classList.toggle("expanded");
+}
+
+function handleMediaUpload(event) {
+    const files = event.target.files;
+    const list = document.getElementById("imagesList");
+
+    for (let file of files) {
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const div = document.createElement("div");
+            div.className = "image-item";
+
+            if (file.type.startsWith("image/")) {
+                div.innerHTML = `
+                    <img src="${e.target.result}" onclick="openImageModal('${e.target.result}')">
+                    <button class="image-remove" onclick="this.parentElement.remove()">✕</button>
+                `;
+            } else if (file.type.startsWith("video/")) {
+                div.innerHTML = `
+                    <video src="${e.target.result}" onclick="openVideoModal('${e.target.result}')"></video>
+                    <button class="image-remove" onclick="this.parentElement.remove()">✕</button>
+                `;
+            }
+
+            list.appendChild(div);
+        };
+
+        reader.readAsDataURL(file);
+    }
+}
+
+function openImageModal(src) {
+    const modal = document.getElementById("imageModal");
+    const img = document.getElementById("imageModalImg");
+
+    img.src = src;
+    modal.classList.add("open");
+}
+
+function closeImageModal() {
+    document.getElementById("imageModal").classList.remove("open");
+}
+
+function openVideoModal(src) {
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("videoModalVideo");
+
+    video.src = src;
+    modal.classList.add("open");
+}
+
+function closeVideoModal() {
+    const modal = document.getElementById("videoModal");
+    const video = document.getElementById("videoModalVideo");
+
+    video.pause();
+    video.src = "";
+    modal.classList.remove("open");
+}
+
+function addProject() {
+    const input = document.getElementById("projectInput");
+    const list = document.getElementById("projectsList");
+
+    const text = input.value.trim();
+    if (!text) return;
+
+    const div = document.createElement("div");
+    div.className = "project-item";
+    div.innerHTML = `
+        ${escapeHtml(text)}
+        <button class="project-remove" onclick="this.parentElement.remove()">✕</button>
+    `;
+
+    list.appendChild(div);
+    input.value = "";
+}
+
+function autoResize(textarea) {
+    textarea.style.height = "auto";
+    textarea.style.height = textarea.scrollHeight + "px";
+}
+
+function updateSendButton() {
+    const input = document.getElementById("messageInput");
+    const button = document.getElementById("sendButton");
+
+    if (input.value.trim().length > 0) {
+        button.disabled = false;
+        button.classList.add("active");
+    } else {
+        button.disabled = true;
+        button.classList.remove("active");
+    }
+}
+
+/* ================= AUTH ================= */
+
+async function logout() {
+    await supabaseClient.auth.signOut();
     window.location.href = "login.html";
+}
+
+async function getAccessToken() {
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error || !data.session) return null;
+    return data.session.access_token;
 }
 
 /* ================= INITIAL LOAD ================= */
 
 window.addEventListener("load", async () => {
-    const token = getToken();
+    const token = await getAccessToken();
     if (!token) {
         window.location.href = "login.html";
         return;
@@ -768,9 +898,12 @@ window.addEventListener("load", async () => {
 /* ================= CHAT LIST ================= */
 
 async function loadChats() {
+    const token = await getAccessToken();
+    if (!token) return logout();
+
     const res = await fetch(`${API_URL}/chats`, {
         headers: {
-            Authorization: `Bearer ${getToken()}`
+            Authorization: `Bearer ${token}`
         }
     });
 
@@ -815,9 +948,12 @@ async function selectChat(chatId) {
 }
 
 async function loadMessages(chatId) {
+    const token = await getAccessToken();
+    if (!token) return logout();
+
     const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
         headers: {
-            Authorization: `Bearer ${getToken()}`
+            Authorization: `Bearer ${token}`
         }
     });
 
@@ -845,11 +981,14 @@ async function sendMessage() {
     addMessageToUI("user", message);
     input.value = "";
 
+    const token = await getAccessToken();
+    if (!token) return logout();
+
     const res = await fetch(`${API_URL}/chats/${currentChatId}/message`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${getToken()}`
+            Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ message })
     });
@@ -863,10 +1002,13 @@ async function sendMessage() {
 /* ================= CREATE NEW CHAT ================= */
 
 async function createNewChat() {
+    const token = await getAccessToken();
+    if (!token) return logout();
+
     const res = await fetch(`${API_URL}/chats`, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${getToken()}`
+            Authorization: `Bearer ${token}`
         }
     });
 
@@ -915,6 +1057,69 @@ function handleKeyPress(event) {
         sendMessage();
     }
 }
+
+/* ================= EVENT LISTENERS ================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelector(".logout-btn")
+    .addEventListener("click", logout);
+    // Send button
+    document.getElementById("sendButton")
+        .addEventListener("click", sendMessage);
+
+    // Textarea typing
+    const textarea = document.getElementById("messageInput");
+
+    textarea.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+
+    textarea.addEventListener("input", () => {
+        autoResize(textarea);
+        updateSendButton();
+    });
+
+    // New chat button
+    document.querySelector(".new-chat-btn")
+        .addEventListener("click", newChat);
+
+    // Section toggles
+    document.querySelectorAll(".section-header")[0]
+        .addEventListener("click", () => toggleSection("images"));
+
+    document.querySelectorAll(".section-header")[1]
+        .addEventListener("click", () => toggleSection("projects"));
+
+    // File upload
+    document.getElementById("mediaInput")
+        .addEventListener("change", handleMediaUpload);
+
+    // Upload button trigger
+    document.querySelector(".upload-btn")
+        .addEventListener("click", () => {
+            document.getElementById("mediaInput").click();
+        });
+
+    // Add project
+    document.querySelector(".add-project-btn")
+        .addEventListener("click", addProject);
+
+    // Image modal close
+document.getElementById("imageModal")
+    .addEventListener("click", (e) => {
+        if (e.target.id === "imageModal") closeImageModal();
+    });
+
+document.getElementById("videoModal")
+    .addEventListener("click", (e) => {
+        if (e.target.id === "videoModal") closeVideoModal();
+    });
+
+});
+
 </script>
 </body>
 </html>
