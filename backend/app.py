@@ -64,7 +64,7 @@ def verify_supabase_token(token: str):
         payload = jwt.decode(
             token,
             JWKS,
-            algorithms=["RS256"],
+            algorithms=["ES256"],
             audience="authenticated",
         )
         return payload

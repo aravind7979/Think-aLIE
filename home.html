@@ -917,7 +917,12 @@ async function loadChats() {
         }
     });
 
-    if (!res.ok) return logout();
+    if (!res.ok) {
+    console.error("API error:", res.status);
+    const text = await res.text();
+    console.error(text);
+    return;
+}
 
     const data = await res.json();
     chats = data.chats || [];
