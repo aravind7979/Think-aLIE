@@ -750,8 +750,8 @@ rows="1">
     <!-- Initialize Supabase -->
     <script>
         const supabaseClient = supabase.createClient(
-            "https://nxpaxiqqvajgqvgmyrpx.supabase.coL",
-            "sb_publishable_mjfPnzZVtvZFhKNQy6sTyQ_LJTpgkq0"
+            "https://nxpaxiqqvajgqvgmyrpx.supabase.co",
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cGF4aXFxdmFqZ3F2Z215cnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NDAyNzgsImV4cCI6MjA4NzMxNjI3OH0.dJKvuBcWWEgenzNR23FlGSIya1jDljNQNl-7LnI5Uh0"
         );
     </script>
 <script>
@@ -886,19 +886,19 @@ async function getAccessToken() {
 /* ================= INITIAL LOAD ================= */
 
 window.addEventListener("load", async () => {
-    const { data: { user }, error } =
-        await supabaseClient.auth.getUser();
+    const { data: { session } } =
+        await supabaseClient.auth.getSession();
 
-    console.log("USER:", user);
-    console.log("ERROR:", error);
-
-    if (error || !user) {
+    if (!session) {
         window.location.href = "login.html";
         return;
     }
 
-    // Set email in UI
-    document.getElementById("userName").textContent = user.email;
+    const user = session.user;
+
+    document.getElementById("userName").textContent =
+        user.email;
+
     document.getElementById("userAvatar").textContent =
         user.email[0].toUpperCase();
 
@@ -1132,4 +1132,4 @@ document.getElementById("videoModal")
 
 </script>
 </body>
-</html>
+</html> 
