@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from jose import jwt
 from supabase import create_client, Client
 
+load_dotenv = lambda: None
 
 # =================================================
 # ENV CONFIG
@@ -30,7 +31,6 @@ JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 security = HTTPBearer()
 
-
 # =================================================
 # FASTAPI APP
 # =================================================
@@ -49,22 +49,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # =================================================
-# AUTH HELPERS
+# AUTH
 # =================================================
 
 def get_jwks():
-    """Fetch Supabase JWKS keys"""
-    response = requests.get(JWKS_URL)
-    if response.status_code != 200:
+    try:
+        return requests.get(JWKS_URL).json()
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to fetch JWKS")
-    return response.json()
 
 
 def verify_supabase_token(token: str):
-    try:
 
+    try:
         jwks = get_jwks()
 
         header = jwt.get_unverified_header(token)
@@ -105,14 +103,12 @@ def get_current_user(
 
     return user_id
 
-
 # =================================================
 # SCHEMAS
 # =================================================
 
 class ChatRequest(BaseModel):
     message: str
-
 
 # =================================================
 # ROOT
@@ -125,12 +121,8 @@ def root():
         "version": "4.0.0",
     }
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run(app, host="0.0.0.0", port=port)
-
 # =================================================
-# CREATE CHAT
+# 1️⃣ CREATE CHAT
 # =================================================
 
 @app.post("/chats")
@@ -148,9 +140,8 @@ def create_chat(user_id: str = Depends(get_current_user)):
 
     return {"chat": response.data[0]}
 
-
 # =================================================
-# LIST CHATS
+# 2️⃣ LIST USER CHATS
 # =================================================
 
 @app.get("/chats")
@@ -166,9 +157,8 @@ def list_chats(user_id: str = Depends(get_current_user)):
 
     return {"chats": response.data}
 
-
 # =================================================
-# GET MESSAGES
+# 3️⃣ GET MESSAGES
 # =================================================
 
 @app.get("/chats/{chat_id}/messages")
@@ -185,9 +175,8 @@ def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
 
     return response.data
 
-
 # =================================================
-# SEND MESSAGE
+# 4️⃣ SEND MESSAGE
 # =================================================
 
 @app.post("/chats/{chat_id}/message")
@@ -205,7 +194,7 @@ def send_message(
         "content": request.message,
     }).execute()
 
-    # Fetch history
+    # Fetch chat history
     history_response = (
         supabase.table("messages")
         .select("*")
@@ -221,7 +210,7 @@ def send_message(
         [f"{m['role']}: {m['content']}" for m in history]
     )
 
-    # AI response
+    # Generate AI response
     if not client:
         ai_response = "Gemini API not configured."
     else:
