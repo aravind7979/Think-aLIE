@@ -745,16 +745,20 @@ rows="1">
 </div>
 </div>
 
-        <!-- Load Supabase library FIRST -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <!-- Initialize Supabase -->
-    <script>
-        const supabaseClient = supabase.createClient(
-            "https://nxpaxiqqvajgqvgmyrpx.supabase.co",
-            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cGF4aXFxdmFqZ3F2Z215cnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NDAyNzgsImV4cCI6MjA4NzMxNjI3OH0.dJKvuBcWWEgenzNR23FlGSIya1jDljNQNl-7LnI5Uh0"
-        );
-    </script>
+<!-- Load Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+<!-- Initialize Supabase -->
 <script>
+const supabaseClient = window.supabase.createClient(
+    "https://nxpaxiqqvajgqvgmyrpx.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im54cGF4aXFxdmFqZ3F2Z215cnB4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3NDAyNzgsImV4cCI6MjA4NzMxNjI3OH0.dJKvuBcWWEgenzNR23FlGSIya1jDljNQNl-7LnI5Uh0"
+);
+</script>
+
+
+<script>
+
 const API_URL =
     window.location.hostname === "localhost"
         ? "http://127.0.0.1:8000"
@@ -763,112 +767,6 @@ const API_URL =
 let currentChatId = null;
 let chats = [];
 
-function newChat() {
-    createNewChat();
-}
-
-function toggleSection(section) {
-    const content = document.getElementById(section + "Content");
-    const arrow = document.getElementById(section + "Arrow");
-
-    content.classList.toggle("expanded");
-    arrow.classList.toggle("expanded");
-}
-
-function handleMediaUpload(event) {
-    const files = event.target.files;
-    const list = document.getElementById("imagesList");
-
-    for (let file of files) {
-        const reader = new FileReader();
-
-        reader.onload = function(e) {
-            const div = document.createElement("div");
-            div.className = "image-item";
-
-            if (file.type.startsWith("image/")) {
-                div.innerHTML = `
-                    <img src="${e.target.result}" onclick="openImageModal('${e.target.result}')">
-                    <button class="image-remove" onclick="this.parentElement.remove()">✕</button>
-                `;
-            } else if (file.type.startsWith("video/")) {
-                div.innerHTML = `
-                    <video src="${e.target.result}" onclick="openVideoModal('${e.target.result}')"></video>
-                    <button class="image-remove" onclick="this.parentElement.remove()">✕</button>
-                `;
-            }
-
-            list.appendChild(div);
-        };
-
-        reader.readAsDataURL(file);
-    }
-}
-
-function openImageModal(src) {
-    const modal = document.getElementById("imageModal");
-    const img = document.getElementById("imageModalImg");
-
-    img.src = src;
-    modal.classList.add("open");
-}
-
-function closeImageModal() {
-    document.getElementById("imageModal").classList.remove("open");
-}
-
-function openVideoModal(src) {
-    const modal = document.getElementById("videoModal");
-    const video = document.getElementById("videoModalVideo");
-
-    video.src = src;
-    modal.classList.add("open");
-}
-
-function closeVideoModal() {
-    const modal = document.getElementById("videoModal");
-    const video = document.getElementById("videoModalVideo");
-
-    video.pause();
-    video.src = "";
-    modal.classList.remove("open");
-}
-
-function addProject() {
-    const input = document.getElementById("projectInput");
-    const list = document.getElementById("projectsList");
-
-    const text = input.value.trim();
-    if (!text) return;
-
-    const div = document.createElement("div");
-    div.className = "project-item";
-    div.innerHTML = `
-        ${escapeHtml(text)}
-        <button class="project-remove" onclick="this.parentElement.remove()">✕</button>
-    `;
-
-    list.appendChild(div);
-    input.value = "";
-}
-
-function autoResize(textarea) {
-    textarea.style.height = "auto";
-    textarea.style.height = textarea.scrollHeight + "px";
-}
-
-function updateSendButton() {
-    const input = document.getElementById("messageInput");
-    const button = document.getElementById("sendButton");
-
-    if (input.value.trim().length > 0) {
-        button.disabled = false;
-        button.classList.add("active");
-    } else {
-        button.disabled = true;
-        button.classList.remove("active");
-    }
-}
 
 /* ================= AUTH ================= */
 
@@ -878,53 +776,70 @@ async function logout() {
 }
 
 async function getAccessToken() {
+
     const { data, error } = await supabaseClient.auth.getSession();
-    if (error || !data.session) return null;
+
+    if (error || !data || !data.session) {
+        console.error("Session missing", error);
+        return null;
+    }
+
     return data.session.access_token;
 }
+
 
 /* ================= INITIAL LOAD ================= */
 
 window.addEventListener("load", async () => {
-    const { data: { session } } =
-        await supabaseClient.auth.getSession();
 
-    if (!session) {
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error || !data.session) {
         window.location.href = "login.html";
         return;
     }
 
-    const user = session.user;
+    const user = data.session.user;
 
-    document.getElementById("userName").textContent =
-        user.email;
-
+    document.getElementById("userName").textContent = user.email;
     document.getElementById("userAvatar").textContent =
         user.email[0].toUpperCase();
 
     await loadChats();
 });
 
+
 /* ================= CHAT LIST ================= */
 
 async function loadChats() {
+
     const token = await getAccessToken();
-    if (!token) return logout();
+
+    if (!token) {
+        console.log("No token found");
+        return logout();
+    }
 
     const res = await fetch(`${API_URL}/chats`, {
+        method: "GET",
         headers: {
-            Authorization: `Bearer ${token}`
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
         }
     });
 
     if (!res.ok) {
-    console.error("API error:", res.status);
-    const text = await res.text();
-    console.error(text);
-    return;
-}
+
+        console.error("API ERROR:", res.status);
+
+        const txt = await res.text();
+        console.error(txt);
+
+        return;
+    }
 
     const data = await res.json();
+
     chats = data.chats || [];
 
     renderChatList();
@@ -936,46 +851,61 @@ async function loadChats() {
     }
 }
 
+
 function renderChatList() {
+
     const sidebar = document.getElementById("chatList");
     sidebar.innerHTML = "";
 
     chats.forEach(chat => {
+
         const btn = document.createElement("div");
+
         btn.className = "chat-item";
         btn.textContent = chat.title || "Untitled Chat";
+
         btn.onclick = () => selectChat(chat.id);
 
-        if (chat.id === currentChatId) {
+        if (chat.id === currentChatId)
             btn.classList.add("active");
-        }
 
         sidebar.appendChild(btn);
     });
 }
 
+
 /* ================= SELECT CHAT ================= */
 
 async function selectChat(chatId) {
+
     currentChatId = chatId;
+
     renderChatList();
+
     await loadMessages(chatId);
 }
 
+
 async function loadMessages(chatId) {
+
     const token = await getAccessToken();
     if (!token) return logout();
 
     const res = await fetch(`${API_URL}/chats/${chatId}/messages`, {
         headers: {
-            Authorization: `Bearer ${token}`
+            "Authorization": `Bearer ${token}`
         }
     });
 
-    if (!res.ok) return logout();
+    if (!res.ok) {
+        console.error("Failed loading messages");
+        return;
+    }
 
     const data = await res.json();
-    const chatMessages = document.getElementById("chatMessages");
+
+    const chatMessages =
+        document.getElementById("chatMessages");
 
     chatMessages.classList.remove("empty");
     chatMessages.innerHTML = "";
@@ -985,68 +915,97 @@ async function loadMessages(chatId) {
     });
 }
 
+
 /* ================= SEND MESSAGE ================= */
 
 async function sendMessage() {
+
     const input = document.getElementById("messageInput");
+
     const message = input.value.trim();
+
     if (!message) return;
-    if (!currentChatId) return alert("Create or select a chat first.");
+
+    if (!currentChatId)
+        return alert("Create or select a chat first.");
 
     addMessageToUI("user", message);
+
     input.value = "";
 
     const token = await getAccessToken();
+
     if (!token) return logout();
 
-    const res = await fetch(`${API_URL}/chats/${currentChatId}/message`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ message })
-    });
+    const res = await fetch(
+        `${API_URL}/chats/${currentChatId}/message`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ message })
+        }
+    );
 
-    if (!res.ok) return logout();
+    if (!res.ok) {
+        console.error("Message send failed");
+        return;
+    }
 
     const data = await res.json();
+
     addMessageToUI("assistant", data.reply);
 }
+
 
 /* ================= CREATE NEW CHAT ================= */
 
 async function createNewChat() {
+
     const token = await getAccessToken();
+
     if (!token) return logout();
 
     const res = await fetch(`${API_URL}/chats`, {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${token}`
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
         }
     });
 
-    if (!res.ok) return logout();
+    if (!res.ok) {
+        console.error("Create chat failed");
+        return;
+    }
 
     const data = await res.json();
 
     chats.unshift(data.chat);
+
     renderChatList();
+
     selectChat(data.chat.id);
 }
+
 
 /* ================= UI ================= */
 
 function addMessageToUI(role, content) {
-    const chatMessages = document.getElementById("chatMessages");
+
+    const chatMessages =
+        document.getElementById("chatMessages");
 
     if (chatMessages.classList.contains("empty")) {
+
         chatMessages.classList.remove("empty");
         chatMessages.innerHTML = "";
     }
 
     const messageDiv = document.createElement("div");
+
     messageDiv.className = `message ${role}`;
 
     messageDiv.innerHTML = `
@@ -1057,82 +1016,82 @@ function addMessageToUI(role, content) {
     `;
 
     chatMessages.appendChild(messageDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    chatMessages.scrollTop =
+        chatMessages.scrollHeight;
 }
 
+
 function escapeHtml(text) {
+
     const div = document.createElement("div");
+
     div.textContent = text;
+
     return div.innerHTML;
 }
 
-function handleKeyPress(event) {
-    if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
+
+/* ================= INPUT ================= */
+
+function autoResize(textarea) {
+
+    textarea.style.height = "auto";
+
+    textarea.style.height =
+        textarea.scrollHeight + "px";
+}
+
+function updateSendButton() {
+
+    const input = document.getElementById("messageInput");
+    const button = document.getElementById("sendButton");
+
+    if (input.value.trim().length > 0) {
+
+        button.disabled = false;
+        button.classList.add("active");
+
+    } else {
+
+        button.disabled = true;
+        button.classList.remove("active");
     }
 }
 
-/* ================= EVENT LISTENERS ================= */
+
+/* ================= EVENTS ================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+
     document.querySelector(".logout-btn")
-    .addEventListener("click", logout);
-    // Send button
+        .addEventListener("click", logout);
+
     document.getElementById("sendButton")
         .addEventListener("click", sendMessage);
 
-    // Textarea typing
-    const textarea = document.getElementById("messageInput");
+    const textarea =
+        document.getElementById("messageInput");
 
-    textarea.addEventListener("keydown", (event) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
+    textarea.addEventListener("keydown", e => {
+
+        if (e.key === "Enter" && !e.shiftKey) {
+
+            e.preventDefault();
+
             sendMessage();
         }
     });
 
     textarea.addEventListener("input", () => {
+
         autoResize(textarea);
+
         updateSendButton();
     });
 
-    // New chat button
     document.querySelector(".new-chat-btn")
-        .addEventListener("click", newChat);
-
-    // Section toggles
-    document.querySelectorAll(".section-header")[0]
-        .addEventListener("click", () => toggleSection("images"));
-
-    document.querySelectorAll(".section-header")[1]
-        .addEventListener("click", () => toggleSection("projects"));
-
-    // File upload
-    document.getElementById("mediaInput")
-        .addEventListener("change", handleMediaUpload);
-
-    // Upload button trigger
-    document.querySelector(".upload-btn")
-        .addEventListener("click", () => {
-            document.getElementById("mediaInput").click();
-        });
-
-    // Add project
-    document.querySelector(".add-project-btn")
-        .addEventListener("click", addProject);
-
-    // Image modal close
-document.getElementById("imageModal")
-    .addEventListener("click", (e) => {
-        if (e.target.id === "imageModal") closeImageModal();
-    });
-
-document.getElementById("videoModal")
-    .addEventListener("click", (e) => {
-        if (e.target.id === "videoModal") closeVideoModal();
-    });
-
+        .addEventListener("click", createNewChat);
 });
 
 </script>
