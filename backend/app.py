@@ -8,7 +8,8 @@ from pydantic import BaseModel
 from jose import jwt
 from supabase import create_client, Client
 
-load_dotenv = lambda: None  # No-op since we're not using .env in this version 
+load_dotenv = lambda: None
+
 # =================================================
 # ENV CONFIG
 # =================================================
@@ -27,14 +28,8 @@ supabase: Client = create_client(
 
 JWKS_URL = f"{SUPABASE_URL}/auth/v1/keys"
 
-try:
-    JWKS = requests.get(JWKS_URL).json()
-except Exception as e:
-    raise RuntimeError(f"Failed to fetch Supabase JWKS: {e}")
-
 client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 security = HTTPBearer()
-
 
 # =================================================
 # FASTAPI APP
@@ -54,20 +49,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # =================================================
 # AUTH
 # =================================================
 
-def verify_supabase_token(token: str):
+def get_jwks():
     try:
+        return requests.get(JWKS_URL).json()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch JWKS")
+
+
+def verify_supabase_token(token: str):
+
+    try:
+        jwks = get_jwks()
+
+        header = jwt.get_unverified_header(token)
+        kid = header["kid"]
+
+        key = None
+        for k in jwks["keys"]:
+            if k["kid"] == kid:
+                key = k
+                break
+
+        if key is None:
+            raise HTTPException(status_code=401, detail="Public key not found")
+
         payload = jwt.decode(
             token,
-            JWKS,
+            key,
             algorithms=["ES256"],
             audience="authenticated",
         )
+
         return payload
+
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -79,11 +97,11 @@ def get_current_user(
     payload = verify_supabase_token(token)
 
     user_id = payload.get("sub")
+
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
     return user_id
-
 
 # =================================================
 # SCHEMAS
@@ -91,7 +109,6 @@ def get_current_user(
 
 class ChatRequest(BaseModel):
     message: str
-
 
 # =================================================
 # ROOT
@@ -103,7 +120,6 @@ def root():
         "status": "Backend live (Supabase edition)",
         "version": "4.0.0",
     }
-
 
 # =================================================
 # 1️⃣ CREATE CHAT
@@ -124,7 +140,6 @@ def create_chat(user_id: str = Depends(get_current_user)):
 
     return {"chat": response.data[0]}
 
-
 # =================================================
 # 2️⃣ LIST USER CHATS
 # =================================================
@@ -141,7 +156,6 @@ def list_chats(user_id: str = Depends(get_current_user)):
     )
 
     return {"chats": response.data}
-
 
 # =================================================
 # 3️⃣ GET MESSAGES
@@ -160,7 +174,6 @@ def get_messages(chat_id: str, user_id: str = Depends(get_current_user)):
     )
 
     return response.data
-
 
 # =================================================
 # 4️⃣ SEND MESSAGE
@@ -181,7 +194,7 @@ def send_message(
         "content": request.message,
     }).execute()
 
-    # Fetch full chat history
+    # Fetch chat history
     history_response = (
         supabase.table("messages")
         .select("*")
