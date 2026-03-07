@@ -2,6 +2,8 @@
 
 A ChatGPT-like web application with Supabase authentication and database.
 
+🔗 **Live Demo:** https://think-lie.vercel.app
+
 ## Features
 
 - 🔐 Supabase Authentication (Signup/Login)
@@ -26,17 +28,6 @@ A ChatGPT-like web application with Supabase authentication and database.
 - Python 3.11+
 - Supabase account
 - Google Gemini API key
-
-### Environment Variables
-
-Create a `.env` file in the backend directory:
-
-```env
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-SUPABASE_ANON_KEY=your_anon_key
-GEMINI_API_KEY=your_gemini_api_key
-```
 
 ### Installation
 
